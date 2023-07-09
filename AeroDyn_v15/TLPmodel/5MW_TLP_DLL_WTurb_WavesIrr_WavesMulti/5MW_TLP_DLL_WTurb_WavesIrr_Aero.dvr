@@ -1,0 +1,23 @@
+-----  AeroDyn Driver v1.00.x Input File  --------------------------------------
+NRELOffshrBsline5MW_Onshore_AeroDyn15.dat           0.8 m diameter MHK turbine tested at Southampton, UK, Ref: Bahaj et al. Power and thrust measurements of marine current turbines under various hydrodynamic flow conditions in a cavitation tunnel and a towing tank, Renewable Energy 32 (2007) 407�426 
+-----  Input Configuration  ----------------------------------------------------
+FALSE          Echo            -  Echo input parameters to "<rootname>.ech"?
+"NRELOffshrBsline5MW_Onshore_AeroDyn15.dat"          AD_InputFile    -  Name of the primary AeroDyn input file
+-----  Turbine Data  -----------------------------------------------------------
+          3   NumBlades       - Number of blades (-)
+        1.5   HubRad          - Hub radius (m)
+        90    HubHt           - Hub height (m)
+   -5.0191    Overhang        - Overhang (m)
+        -5    ShftTilt        - Shaft tilt (deg)
+      -2.5    Precone         - Blade precone (deg)
+-----  I/O Settings  -----------------------------------------------------------
+"LTP"            OutFileRoot     - Root name for any output files (use "" for .dvr rootname) (-)
+True          TabDel          - When generating formatted output (OutForm=True), make output tab-delimited (fixed-width otherwise) (flag)
+"ES15.6E3"    OutFmt          - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
+True          Beep            - Beep on exit (flag)
+-----  Combined-Case Analysis  -------------------------------------------------
+         2    NumCases        - Number of cases to run
+WndSpeed	ShearExp	RotSpd	Pitch	Yaw			dT		Tmax
+(m/s)			(-)		(rpm)	(deg)	(deg)		(s)		(s)
+12 			0.00E+00 	  15 	 5 	0.00E+00 	0.1 	0.1
+18 			0.00E+00 	  15 	 5 	0.00E+00 	0.1 	0.1
