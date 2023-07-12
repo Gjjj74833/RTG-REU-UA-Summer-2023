@@ -33,6 +33,7 @@ def process_rotor_performance(input_file = "Cp_Ct_Cq.NREL5MW.txt"):
         The TSR values corresponding to the row of C_p
 
     """
+    
     pitch_angles = []
     TSR_values = []
 
@@ -70,6 +71,8 @@ def C_p(TSR, beta):
     -------
     corresponding power coefficient
     """
+    beta = np.rad2deg(beta)
+
     performance = process_rotor_performance()
     C_p = performance[0] 
     pitch_list = performance[1] 
@@ -109,13 +112,15 @@ def Cp(omega_R, v_in, beta):
         the power coefficient
 
     """
+
     
     # Convert rad/s to rpm since the AeroDyn driver takes rpm as parameter
     omega_rpm = omega_R*(60 / (2*np.pi))
+    beta_deg = beta*(180/np.pi)
     
     omega_Rstr = str(omega_rpm)
     v_instr = str(v_in)
-    beta_str = str(beta)
+    beta_str = str(beta_deg)
     
     # Replace the path to the AeroDyn exe and drv file based on your file location
     path_exe = "C:/Users/ghhh7/AeroDyn_v15/bin/AeroDyn_Driver_x64.exe"
@@ -144,10 +149,6 @@ def Cp(omega_R, v_in, beta):
     return float(data_list[4])
 
 
-print(Cp(1.570796, 12, 5))
-print(Cp(1.570796, 12, 20))
-print(C_p(8.26, 5))
-print(C_p(8.26, 20))
 
 def structure(x_1, beta, omega_R, t):
     """
@@ -181,7 +182,6 @@ def structure(x_1, beta, omega_R, t):
     v_w = wind speed
     beta = blade pitch angle
     """
-    
     # For test, consider constant wind and no wave
     v_w = 18
     
@@ -197,6 +197,8 @@ def structure(x_1, beta, omega_R, t):
     a_x = [0, 0]
     a_y = [0, 0]
     
+
+    
     
     
     g = 9.80665  # (m/s^2) gravity acceleration
@@ -208,14 +210,14 @@ def structure(x_1, beta, omega_R, t):
     M_P = 110000  # (kg) Mass of blades and hub
     M_S = 8947870  # (kg) Mass of "structure" (tower and floater)
     m_x = 11127000  # (kg) Added mass in horizontal direction
-    m_y = 1504400  # (kt) Added mass in vertical direction
+    m_y = 1504400  # (kg) Added mass in vertical direction
 
     d_Nh = -1.8  # (m) Horizontal distance between BS and BN
     d_Nv = 126.9003  # (m) Vertical distance between BS and BN
     d_Ph = 5.4305  # (m) Horizontal distance between BS and BP
     d_Pv = 127.5879  # (m) Vertical distance between BS and BP
 
-    J_S = 3491.7  # (kg*m^2) "Structure" moment of inertia
+    J_S = 3.4917*10**9 # (kg*m^2) "Structure" moment of inertia
     J_N = 2607890  # (kg*m^2) Nacelle moment of inertia
     J_P = 50365000  # (kg*m^2) Blades, hub and low speed shaft moment of inertia
 
@@ -227,7 +229,7 @@ def structure(x_1, beta, omega_R, t):
 
     M_d = M_N*d_N + M_P*d_P
     J_TOT = J_S + J_N + J_P + M_N*d_N**2 + M_P*d_P**2
-   
+
     E = np.array([[1, 0, 0, 0, 0, 0],
          [0, M_X, 0, 0, 0, M_d*np.cos(alpha)],
          [0, 0, 1, 0, 0, 0],
@@ -245,10 +247,12 @@ def structure(x_1, beta, omega_R, t):
     r_tb = 3  # (m) Maximum radius of the tower
     d_t = 10.3397  # (m) Vertical distance between BS and hooks of tie rods
     l_a = 27  # (m) Distance between the hooks of tie rods
-    l_0 = 151.73  # (m) Rest length of tie rods
+    l_0 = 181.73  # (m) Rest length of tie rods
+    
     K_T1 = 2*(1.5/l_0)*10**9  # (N/m) Spring constant of lateral tie rods
     K_T2 = 2*(1.5/l_0)*10**9  # (N/m) Spring constant of lateral tie rods
     K_T3 = 4*(1.5/l_0)*10**9  # (N/m) Spring constant of central tie rod
+
     d_T = 75.7843 # (m) Vertical distance between BS and BT
     rho = 1.225 # (kg/m^3) Density of air
     C_dN = 1 # (-) Nacelle drag coefficient
@@ -272,17 +276,18 @@ def structure(x_1, beta, omega_R, t):
     # Weight Forces
     Qwe_zeta = 0
     Qwe_eta = (M_N + M_P + M_S)*g
-    Qwe_alpha = (M_N*d_Nv + M_P*d_Pv)*np.sin(alpha)*g + (M_N*d_Nh + M_P*d_Ph )*np.cos(alpha)*g
+    Qwe_alpha = ((M_N*d_Nv + M_P*d_Pv)*np.sin(alpha) + (M_N*d_Nh + M_P*d_Ph )*np.cos(alpha))*g
 
     # Buoyancy Forces
     h_w = h  # Assume the sea bed is flat and horizontal
     h_sub = min(h_w - h + eta + d_Sbott, h_pt)
+    
     d_G = eta - h_sub/2
     V_g = h_sub*np.pi*r_g**2 + max((h_w - h + eta + d_Sbott) - h_pt, 0)*np.pi*r_tb**2
 
     Qb_zeta = 0
     Qb_eta = -rho_w*V_g*g
-    Qb_alpha = rho_w*V_g*g*d_G*np.sin(alpha)
+    Qb_alpha = -rho_w*V_g*g*d_G*np.sin(alpha)
     
     # Tie Rod Force
     
@@ -303,12 +308,12 @@ def structure(x_1, beta, omega_R, t):
     theta_2 = np.arctan((D_x + zeta - l_a*np.cos(alpha) - d_t*np.sin(alpha))
                         /(h - eta + l_a*np.sin(alpha) - d_t*np.cos(alpha)))
     theta_3 = np.arctan((zeta - d_t*np.sin(alpha))/(h - eta - d_t*np.cos(alpha)))
-    
+
     v_tir = (0.5*dia_l)**2*np.pi
     w_tir = den_l*g
     b_tir = rho_w*g*v_tir
     lambda_tir = w_tir - b_tir
-    
+
     Qt_zeta = f_1*np.sin(theta_1) - f_2*np.sin(theta_2) - f_3*np.sin(theta_3)
     Qt_eta = f_1*np.cos(theta_1) + f_2*np.cos(theta_2) + f_3*np.cos(theta_3) + 4*lambda_tir*l_0
     Qt_alpha = (f_1*(l_a*np.cos(theta_1 + alpha) - d_t*np.sin(theta_1 + alpha)) 
@@ -317,14 +322,13 @@ def structure(x_1, beta, omega_R, t):
                 *(l_a*np.cos(alpha) - d_t*np.sin(alpha)) 
                 - lambda_tir*l_0*(l_a*np.cos(alpha) 
                 + d_t*np.sin(alpha)) - 2*lambda_tir*l_0*d_t*np.sin(alpha))
-    
+
     # Wind Force
     v_in = v_w + v_zeta + d_P*omega*np.cos(alpha)
-    #TSR = (omega_R*R)/v_in
-    
-    #print(v_in)
-    #v_root = np.roots([1, v_in, v_in**2, (1 - 2*C_p(TSR, beta))*v_in**3])
-    v_root = np.roots([1, v_in, v_in**2, (1 - 2*Cp(omega_R, v_in, beta))*v_in**3])
+    TSR = (omega_R*R)/v_in
+
+    v_root = np.roots([1, v_in, v_in**2, (1 - 2*C_p(TSR, beta))*v_in**3])
+    #v_root = np.roots([1, v_in, v_in**2, (1 - 2*Cp(omega_R, v_in, beta))*v_in**3])
     v_out = None
     for i in v_root:
         if np.isreal(i):
@@ -346,7 +350,6 @@ def structure(x_1, beta, omega_R, t):
     Qwi_alpha = (-FA*(d_Pv*np.cos(alpha) - d_Ph*np.sin(alpha))
                  -FAN*(d_Nv*np.cos(alpha) - d_Nh*np.sin(alpha))
                  -FAT*d_T*np.cos(alpha))
-    
     
     # Wave and Drag Forces
     h_pg = np.zeros(n_dg)
@@ -373,44 +376,31 @@ def structure(x_1, beta, omega_R, t):
                     + (v_eta + (h_pg[i] - d_Sbott)*omega*np.sin(alpha) - v_y[i])*np.cos(alpha))
         a_per[i] = a_x[i]*np.cos(alpha) + a_y[i]*np.sin(alpha)
         
-        tempQh_zeta[i] = (-0.5*C_dgper*rho_w*2*r_g*(h_sub/n_dg)*np.abs(v_per[i])*v_per[i]*np.cos(alpha)
-                        - 0.5*C_dgpar*rho_w*np.pi*2*r_g*(h_sub/n_dg)*np.abs(v_par[i])*v_par[i]*np.sin(alpha))
-        tempQh_eta[i] = (-0.5*C_dgper*rho_w*2*r_g*(h_sub/n_dg)*np.abs(v_par[i])*v_par[i]*np.cos(alpha)
-                         - 0.5*C_dgpar*rho_w*np.pi*2*r_g*(h_sub/n_dg)*np.abs(v_par[i])*v_par[i]*np.cos(alpha))
+        tempQh_zeta[i] = (-0.5*C_dgper*rho_w*2*r_g*(h_sub/n_dg)*  np.abs(v_per[i])*v_per[i]*np.cos(alpha)
+                        - 0.5*C_dgpar*rho_w*np.pi*2*r_g*(h_sub/n_dg)*  np.abs(v_par[i])*v_par[i]*np.sin(alpha))
+        tempQh_eta[i] = (-0.5*C_dgper*rho_w*2*r_g*(h_sub/n_dg)* np.abs(v_per[i])*v_per[i]*np.sin(alpha)
+                         - 0.5*C_dgpar*rho_w*np.pi*2*r_g*(h_sub/n_dg)* np.abs(v_par[i])*v_par[i]*np.cos(alpha))
         tempQwa_zeta[i] = (rho_w*V_g + m_x)*a_per[i]*np.cos(alpha)/n_dg
         tempQwa_eta[i] =  (rho_w*V_g + m_x)*a_per[i]*np.sin(alpha)/n_dg
         
-        Qh_zeta += tempQh_zeta[i] - 0.5*C_dgb*rho_w*np.pi*r_g**2*np.abs(v_par[1])*v_par[1]*np.sin(alpha)
-        Qh_eta += tempQh_eta[i] - 0.5*C_dgb*rho_w*np.pi*r_g**2*np.abs(v_par[1])*v_par[1]*np.cos(alpha)
+        Qh_zeta += tempQh_zeta[i] 
+        Qh_eta += tempQh_eta[i] 
         Qwa_zeta += tempQwa_zeta[i]
         Qwa_eta += tempQwa_eta[i]
         Qh_alpha += (tempQh_zeta[i]*(h_pg[i] - d_Sbott)*np.cos(alpha)
                     + tempQh_eta[i]*(h_pg[i] - d_Sbott)*np.sin(alpha))
         Qwa_alpha += (tempQwa_zeta[i]*(h_pg[i] - d_Sbott)*np.cos(alpha)
                     + tempQwa_eta[i]*(h_pg[i] - d_Sbott)*np.sin(alpha))
-        
-    print(Qt_zeta)
     
-    
-    
+    Qh_zeta -= 0.5*C_dgb*rho_w*np.pi*r_g**2*np.abs(v_par[0])*v_par[0]*np.sin(alpha)
+    Qh_eta -= 0.5*C_dgb*rho_w*np.pi*r_g**2*np.abs(v_par[0])*v_par[0]*np.cos(alpha)
+
     # net force in x DOF
-    Q_zeta = Qwe_zeta + Qb_zeta + Qt_zeta + Qwi_zeta + Qwa_zeta + Qh_zeta
+    Q_zeta = Qwe_zeta + Qb_zeta + Qt_zeta + Qh_zeta + Qwa_zeta + Qwi_zeta + Qh_zeta# 
     # net force in y DOF
-    Q_eta = Qwe_eta + Qb_eta + Qt_eta + Qwi_eta + Qwa_eta + Qh_zeta
+    Q_eta = Qwe_eta + Qb_eta + Qt_eta + Qh_eta + Qwa_eta + Qwi_eta + Qh_eta
     # net torque in pitch DOF
-    Q_alpha = Qwe_alpha + Qb_alpha + Qt_alpha + Qwi_alpha + Qwa_alpha + Qh_alpha
-    #print(V_g)
-    #print(Qb_eta)
-    '''
-    Q_zeta = Qwe_zeta + Qb_zeta + Qwa_zeta + Qh_zeta + Qwi_zeta
-    # net force in y DOF
-    Q_eta = Qwe_eta + Qb_eta + Qwa_eta + Qh_zeta + Qwi_eta
-    # net torque in pitch DOF
-    Q_alpha = Qwe_alpha + Qb_alpha + Qwa_alpha + Qh_alpha + Qwi_alpha
-    print(Qwe_eta, Qb_eta)
-    #print(Qb_eta)
-    '''
-    
+    Q_alpha = Qwe_alpha + Qb_alpha + Qt_alpha + Qh_alpha + Qwa_alpha + Qh_alpha + Qwi_alpha
 
     F = np.array([v_zeta, 
                   Q_zeta + M_d*omega**2*np.sin(alpha), 
@@ -418,7 +408,7 @@ def structure(x_1, beta, omega_R, t):
                   Q_eta - M_d*omega**2*np.cos(alpha), 
                   omega, 
                   Q_alpha])
-
+    print(l_3, l_1, l_2)
     return np.linalg.inv(E) @ F, v_in
 
 
@@ -435,14 +425,13 @@ def WindTurbine(omega_R, v_in, beta, T_E, t):
     tildeJ_R = eta_G**2*J_G + J_R
     tildeT_E = eta_G*T_E
     
-    #TSR = (omega_R*R)/v_in
+    TSR = (omega_R*R)/v_in
     
     P_wind = 0.5*rho*A*v_in**3
-    #P_A = P_wind*Cp(TSR, beta)
-    P_A = P_wind*Cp(omega_R, v_in, beta)
+    P_A = P_wind*C_p(TSR, beta)
+    #P_A = P_wind*Cp(omega_R, np.abs(v_in), beta)
     
     T_A = P_A/omega_R
-    
     domega_R = 1/(tildeJ_R)*(T_A - tildeT_E)
     
     return domega_R
@@ -476,8 +465,6 @@ def Betti(x, t, beta, T_E):
     """
     x1 = x[:6]
     omega_R = x[6]
-    
-    #print(omega_R)
     
     dx1dt, v_in = structure(x1, beta, omega_R, t)
     dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t)
@@ -531,15 +518,12 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E):
         x[i + 1] = x[i] + dt * (k1 + 2*k2 + 2*k3 + k4) / 6
         count += 1
         print(count)
-        #print(x[1])
-        
 
     return t, x
 
-
 x0 = np.array([0, 0, 0, 0, 0, 0, 1])
 
-t, x = rk4(Betti, x0, 0, 5, 0.0125, 0, 418000)
+t, x = rk4(Betti, x0, 0, 100, 0.01, 0.26, 43000)
 
 state_names = ['zeta', 'v_zeta', 'eta', 'v_eta', 'alpha', 'omega', 'omega_R']
 
@@ -550,10 +534,8 @@ for i in range(x.shape[1]):
     plt.ylabel(f'{state_names[i]}')
     plt.title(f'Time evolution of {state_names[i]}')
     plt.grid(True)
-    plt.xlim(0, 5.5)
+    plt.xlim(0, 100)
     plt.show()
-
-    
 
 
 

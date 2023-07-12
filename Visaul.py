@@ -107,7 +107,7 @@ def visual(data_dict, key, key_x = "Time"):
 ###############################################################################
     
 data_dict = readOutFiles()
-visual(data_dict, "RotTorq")
+visual(data_dict, "PtfmSurge")
 
     
     
