@@ -58,7 +58,7 @@ def process_rotor_performance(input_file = "Cp_Ct_Cq.NREL5MW.txt"):
 
     
 
-def C_p(TSR, beta):
+def C_p(TSR, beta, performance):
     """
     Find the power coefficient based on the given TSR value and pitch angle
 
@@ -73,7 +73,6 @@ def C_p(TSR, beta):
     """
     beta = np.rad2deg(beta)
 
-    performance = process_rotor_performance()
     C_p = performance[0] 
     pitch_list = performance[1] 
     TSR_list = performance[2]
@@ -150,7 +149,7 @@ def Cp(omega_R, v_in, beta):
 
 
 
-def structure(x_1, beta, omega_R, t):
+def structure(x_1, beta, omega_R, t, Cp_type, performance):
     """
     The structure of the Betti model
 
@@ -183,7 +182,7 @@ def structure(x_1, beta, omega_R, t):
     beta = blade pitch angle
     """
     # For test, consider constant wind and no wave
-    v_w = 18
+    v_w = 23
     
     zeta = x_1[0] # surge (x) position
     v_zeta = x_1[1] # surge velocity
@@ -247,7 +246,7 @@ def structure(x_1, beta, omega_R, t):
     r_tb = 3  # (m) Maximum radius of the tower
     d_t = 10.3397  # (m) Vertical distance between BS and hooks of tie rods
     l_a = 27  # (m) Distance between the hooks of tie rods
-    l_0 = 181.73  # (m) Rest length of tie rods
+    l_0 = 151.73  # (m) Rest length of tie rods
     
     K_T1 = 2*(1.5/l_0)*10**9  # (N/m) Spring constant of lateral tie rods
     K_T2 = 2*(1.5/l_0)*10**9  # (N/m) Spring constant of lateral tie rods
@@ -327,8 +326,10 @@ def structure(x_1, beta, omega_R, t):
     v_in = v_w + v_zeta + d_P*omega*np.cos(alpha)
     TSR = (omega_R*R)/v_in
 
-    v_root = np.roots([1, v_in, v_in**2, (1 - 2*C_p(TSR, beta))*v_in**3])
-    #v_root = np.roots([1, v_in, v_in**2, (1 - 2*Cp(omega_R, v_in, beta))*v_in**3])
+    if Cp_type == 0:
+        v_root = np.roots([1, v_in, v_in**2, (1 - 2*C_p(TSR, beta, performance))*v_in**3])
+    else:
+        v_root = np.roots([1, v_in, v_in**2, (1 - 2*Cp(omega_R, v_in, beta))*v_in**3])
     v_out = None
     for i in v_root:
         if np.isreal(i):
@@ -408,12 +409,12 @@ def structure(x_1, beta, omega_R, t):
                   Q_eta - M_d*omega**2*np.cos(alpha), 
                   omega, 
                   Q_alpha])
-    print(l_3, l_1, l_2)
+
     return np.linalg.inv(E) @ F, v_in
 
 
 
-def WindTurbine(omega_R, v_in, beta, T_E, t):
+def WindTurbine(omega_R, v_in, beta, T_E, t, Cp_type, performance):
     # Constants and parameters
     J_G = 534.116 # (kg*m^2) Total inertia of electric generator and high speed shaft
     J_R = 35444067 # (kg*m^2) Total inertia of blades, hub and low speed shaft
@@ -428,17 +429,28 @@ def WindTurbine(omega_R, v_in, beta, T_E, t):
     TSR = (omega_R*R)/v_in
     
     P_wind = 0.5*rho*A*v_in**3
-    P_A = P_wind*C_p(TSR, beta)
-    #P_A = P_wind*Cp(omega_R, np.abs(v_in), beta)
+    if Cp_type == 0:
+        P_A = P_wind*C_p(TSR, beta, performance)
+    else:
+        P_A = P_wind*Cp(omega_R, np.abs(v_in), beta)
     
     T_A = P_A/omega_R
     domega_R = 1/(tildeJ_R)*(T_A - tildeT_E)
     
     return domega_R
 
+'''
+def wave():
+    
+    def S_PM(f):
+        
+        alpha_PM = 0.0081
+        g = 9.80665  # (m/s^2) gravity acceleration
+        
+        S_PM = ((alpha_PM*g**2)/((2*np.pi)**4*f**5))*np.e**(-1.25*(f/f_PM)**(-4))
+'''
 
-
-def Betti(x, t, beta, T_E):
+def Betti(x, t, beta, T_E, Cp_type, performance):
     """
     Combine the WindTurbine model and structure model
     
@@ -466,18 +478,15 @@ def Betti(x, t, beta, T_E):
     x1 = x[:6]
     omega_R = x[6]
     
-    dx1dt, v_in = structure(x1, beta, omega_R, t)
-    dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t)
+    dx1dt, v_in = structure(x1, beta, omega_R, t, Cp_type, performance)
+    dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t, Cp_type, performance)
     dxdt = np.append(dx1dt, dx2dt)
     
     return dxdt
 
 
 
-###############################################################################
-###############################################################################
-
-def rk4(Betti, x0, t0, tf, dt, beta, T_E):
+def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance):
     """
     Solve the system of ODEs dx/dt = Betti(x, t) using the fourth-order Runge-Kutta method.
 
@@ -496,6 +505,10 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E):
         Blade pitch angle.
     T_E : float
         The generator torque.
+    Cp_type: int
+        Cp computation method 
+        0: read file
+        1: run AeroDyn v15 driver
         
     Returns:
     np.array, np.array
@@ -511,31 +524,75 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E):
     count = 0
 
     for i in range(n - 1):
-        k1 = Betti(x[i], t[i], beta, T_E)
-        k2 = Betti(x[i] + 0.5 * dt * k1, t[i] + 0.5 * dt, beta, T_E)
-        k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E)
-        k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E)
+        k1 = Betti(x[i], t[i], beta, T_E, Cp_type, performance)
+        k2 = Betti(x[i] + 0.5 * dt * k1, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance)
+        k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance)
+        k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E, Cp_type, performance)
         x[i + 1] = x[i] + dt * (k1 + 2*k2 + 2*k3 + k4) / 6
+        
+        # Convert pitch anlge, velocity to deg and deg/s, rotor speed to rpm
+        x[i][4] = np.rad2deg(x[i][4])
+        x[i][5] = np.rad2deg(x[i][5])
+        x[i][6] = (60 / (2*np.pi)) * x[i][6]
+        if i == n - 1:
+            x[i + 1][4] = np.rad2deg(x[i + 1][4])
+            x[i + 1][5] = np.rad2deg(x[i + 1][5])
+            x[i + 1][6] = (60 / (2*np.pi)) * x[i + 1][6]
+    
         count += 1
         print(count)
 
     return t, x
 
-x0 = np.array([0, 0, 0, 0, 0, 0, 1])
+def main(end_time, time_step, Cp_type = 0):
+    """
+    Cp computation method
 
-t, x = rk4(Betti, x0, 0, 100, 0.01, 0.26, 43000)
+    Parameters
+    ----------
+    Cp_type : TYPE, optional
+        DESCRIPTION. The default is 0.
+        0: read the power coefficient file. Fast but not very accurate
+        1: run the AeroDyn 15 driver, very accurate and very slow
 
-state_names = ['zeta', 'v_zeta', 'eta', 'v_eta', 'alpha', 'omega', 'omega_R']
+    Returns
+    -------
+    None.
 
-for i in range(x.shape[1]):
-    plt.figure()  # create a new figure for each state
-    plt.plot(t, x[:, i])
-    plt.xlabel('Time')
-    plt.ylabel(f'{state_names[i]}')
-    plt.title(f'Time evolution of {state_names[i]}')
-    plt.grid(True)
-    plt.xlim(0, 100)
-    plt.show()
+    """
+    
+    performance = process_rotor_performance()
+    
+    start_time = 0
+    
+    # modify this to change initial condition
+    #[zeta, v_zeta, eta, v_eta, alpha, omega, omega_R]
+    x0 = np.array([0, 0, 0, 0, 0, 0, 1])
+
+    # modify this to change run time and step size
+    #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
+    t, x = rk4(Betti, x0, start_time, end_time, time_step, 0.5, 43000, Cp_type, performance)
+
+    state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
+                   'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
+
+    for i in range(x.shape[1]):
+        plt.figure()  # create a new figure for each state
+        plt.plot(t, x[:, i])
+        plt.xlabel('Time')
+        plt.ylabel(f'{state_names[i]}')
+        plt.title(f'Time evolution of {state_names[i]}')
+        plt.grid(True)
+        plt.xlim(0, end_time)
+        plt.show()
+        
+        
+
+###############################################################################
+###############################################################################
+        
+    
+main(1000, 0.01)
 
 
 
