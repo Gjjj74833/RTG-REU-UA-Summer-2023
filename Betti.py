@@ -597,8 +597,11 @@ def main(end_time, time_step, Cp_type = 0):
 ###############################################################################
         
 
-main(300, 0.01, 0)
-performance = process_rotor_performance()
+
+    
+
+#main(300, 0.01, 0)
+#performance = process_rotor_performance()
 
 #print(C_p(6.5, 0, performance), Cp(1.2566, 12, 0))
 

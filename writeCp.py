@@ -7,8 +7,9 @@ Write the power coefficient file
 """
 
 import numpy as np
-import os
+import matplotlib.pyplot as plt
 from Betti import AeroCp
+from Betti import process_rotor_performance
 
 def write(pitch_step = 0.1, omega_step = 0.01, v_w = 10):
     
@@ -60,8 +61,36 @@ def write(pitch_step = 0.1, omega_step = 0.01, v_w = 10):
             count[1] = 0
                             
             
+def visualCp():
+    
+    performance = process_rotor_performance()
+    
+    performance = process_rotor_performance()
+    
+    C_p = performance[0] 
+    pitch_list = performance[1] 
+    TSR_list = performance[2]
+    
+    C_p = np.ma.masked_less(C_p, 0)
+    
+    pitch, TSR = np.meshgrid(pitch_list, TSR_list)
+    
+    plt.figure()
+    c = plt.pcolormesh(pitch, TSR, C_p, cmap='Blues')  # Replace Cp with your 2D array
+    plt.colorbar(c, label='Cp value')  # Add a colorbar to the right
 
-write()
+    # Create contour lines
+    contour_lines = plt.contour(pitch, TSR, C_p, colors='black')
+    plt.clabel(contour_lines, inline=True, fontsize=8)  # Add labels to the contour lines
+
+    plt.xlabel('Blade Pitch')
+    plt.ylabel('TSR')
+    plt.title('Cp as a function of Blade Pitch and TSR')
+    plt.xlim(0, 30)
+    plt.show()
+    
+    
+visualCp()
         
         
         
