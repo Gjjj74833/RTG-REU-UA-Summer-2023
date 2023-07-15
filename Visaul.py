@@ -42,11 +42,10 @@ def readOutFiles(input_file = "5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti.out"):
         # Extract the units
         units_str = lines[7]
         units = units_str.split()
-        '''
+        
         # Map the parameters with units
-        for i in range(len(header)):
-            header[i] += " " + units[i]
-        '''
+        header_units_map = {h: u for h, u in zip(header, units)}
+        
         # Extract the data
         for line in lines[9:]:  # assuming data starts from the 8th line
             row = [float(col) for col in line.split() if col.strip() != '']
@@ -57,11 +56,11 @@ def readOutFiles(input_file = "5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti.out"):
         
         data_dict = dict(zip(header, data))
         
-    return data_dict
+    return data_dict, header_units_map
 
 
 
-def visual(data_dict, key, key_x = "Time"):
+def visual(data_dict, header_units_map, key, key_x = "Time"):
     """
     Plot the data which key is the parameter string. The function will use
     the data in the data_dict in the key and plot in y-axis of a graph. 
@@ -96,7 +95,7 @@ def visual(data_dict, key, key_x = "Time"):
     plt.figure(figsize=(10,6))
     plt.plot(x_data, y_data)
     plt.xlabel(key_x)
-    plt.ylabel(key)
+    plt.ylabel(key + " " + header_units_map[key])
     plt.title(f'{key} vs. {key_x}')
     plt.xlim(min(x_data), max(x_data))
     plt.grid(True)
@@ -106,8 +105,11 @@ def visual(data_dict, key, key_x = "Time"):
 ###############################################################################
 ###############################################################################
     
-data_dict = readOutFiles()
-visual(data_dict, "PtfmSurge")
+data_dict, unit_dict = readOutFiles()
+
+visual(data_dict, unit_dict, "RtTSR")
+visual(data_dict, unit_dict, "RtAeroCp")
+visual(data_dict, unit_dict, "PtfmSurge")
 
     
     

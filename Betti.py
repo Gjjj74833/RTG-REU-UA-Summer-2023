@@ -89,7 +89,7 @@ def C_p(TSR, beta, performance):
     return C_p[TSR_index][pitch_index]
 
 
-def Cp(omega_R, v_in, beta):
+def AeroCp(omega_R, v_in, beta):
     """
     Compute the power coefficient. Based on input requirements for 
     AeroDyn v15, we take the rotor speed and relative wind velocity as
@@ -103,7 +103,7 @@ def Cp(omega_R, v_in, beta):
     v_in : float
         relative wind speed
     beta : float
-        blade pitch angle
+        blade pitch angle in rad
 
     Returns
     -------
@@ -182,7 +182,7 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance):
     beta = blade pitch angle
     """
     # For test, consider constant wind and no wave
-    v_w = 23
+    v_w =10
     
     zeta = x_1[0] # surge (x) position
     v_zeta = x_1[1] # surge velocity
@@ -324,12 +324,18 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance):
 
     # Wind Force
     v_in = v_w + v_zeta + d_P*omega*np.cos(alpha)
+
     TSR = (omega_R*R)/v_in
 
+    Cp = 0
+
     if Cp_type == 0:
-        v_root = np.roots([1, v_in, v_in**2, (1 - 2*C_p(TSR, beta, performance))*v_in**3])
+        Cp = C_p(TSR, beta, performance)
     else:
-        v_root = np.roots([1, v_in, v_in**2, (1 - 2*Cp(omega_R, v_in, beta))*v_in**3])
+        Cp = AeroCp(omega_R, v_in, beta)
+    
+    v_root = np.roots([1, v_in, v_in**2, (1 - 2*Cp)*v_in**3])
+    
     v_out = None
     for i in v_root:
         if np.isreal(i):
@@ -410,11 +416,11 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance):
                   omega, 
                   Q_alpha])
 
-    return np.linalg.inv(E) @ F, v_in
+    return np.linalg.inv(E) @ F, v_in, Cp
 
 
 
-def WindTurbine(omega_R, v_in, beta, T_E, t, Cp_type, performance):
+def WindTurbine(omega_R, v_in, beta, T_E, t, Cp, Cp_type, performance):
     # Constants and parameters
     J_G = 534.116 # (kg*m^2) Total inertia of electric generator and high speed shaft
     J_R = 35444067 # (kg*m^2) Total inertia of blades, hub and low speed shaft
@@ -426,29 +432,27 @@ def WindTurbine(omega_R, v_in, beta, T_E, t, Cp_type, performance):
     tildeJ_R = eta_G**2*J_G + J_R
     tildeT_E = eta_G*T_E
     
-    TSR = (omega_R*R)/v_in
-    
     P_wind = 0.5*rho*A*v_in**3
-    if Cp_type == 0:
-        P_A = P_wind*C_p(TSR, beta, performance)
-    else:
-        P_A = P_wind*Cp(omega_R, np.abs(v_in), beta)
-    
+
+    P_A = P_wind*Cp
+
     T_A = P_A/omega_R
-    domega_R = 1/(tildeJ_R)*(T_A - tildeT_E)
+    domega_R = (1/tildeJ_R)*(T_A - tildeT_E)
     
     return domega_R
 
-'''
-def wave():
-    
+
+def wave(t):
+    '''
     def S_PM(f):
         
         alpha_PM = 0.0081
         g = 9.80665  # (m/s^2) gravity acceleration
         
         S_PM = ((alpha_PM*g**2)/((2*np.pi)**4*f**5))*np.e**(-1.25*(f/f_PM)**(-4))
-'''
+    '''
+    
+    
 
 def Betti(x, t, beta, T_E, Cp_type, performance):
     """
@@ -478,8 +482,8 @@ def Betti(x, t, beta, T_E, Cp_type, performance):
     x1 = x[:6]
     omega_R = x[6]
     
-    dx1dt, v_in = structure(x1, beta, omega_R, t, Cp_type, performance)
-    dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t, Cp_type, performance)
+    dx1dt, v_in, Cp = structure(x1, beta, omega_R, t, Cp_type, performance)
+    dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t, Cp, Cp_type, performance)
     dxdt = np.append(dx1dt, dx2dt)
     
     return dxdt
@@ -540,9 +544,11 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance):
             x[i + 1][6] = (60 / (2*np.pi)) * x[i + 1][6]
     
         count += 1
-        print(count)
+        #print(count)
 
     return t, x
+
+
 
 def main(end_time, time_step, Cp_type = 0):
     """
@@ -571,7 +577,7 @@ def main(end_time, time_step, Cp_type = 0):
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x = rk4(Betti, x0, start_time, end_time, time_step, 0.5, 43000, Cp_type, performance)
+    t, x = rk4(Betti, x0, start_time, end_time, time_step, 0, 25000, Cp_type, performance)
 
     state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
                    'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
@@ -587,14 +593,14 @@ def main(end_time, time_step, Cp_type = 0):
         plt.show()
         
         
-
 ###############################################################################
 ###############################################################################
         
-    
-main(1000, 0.01)
 
+main(300, 0.01, 0)
+performance = process_rotor_performance()
 
+#print(C_p(6.5, 0, performance), Cp(1.2566, 12, 0))
 
 
 
