@@ -18,11 +18,11 @@ def write(pitch_step = 0.1, omega_step = 0.01, v_w = 10):
         R = 63 # (m) Radius of rotor 
         
         # Create a list including all pitch angles to compute
-        pitch_angle = np.arange(-5, 45.1, pitch_step).tolist()
+        pitch_angle = np.arange(-20, 45.1, pitch_step).tolist()
         pitch_str = ' '.join("{:.2f}".format(num) for num in pitch_angle)
         
         # Create a list including all rotor speed to compute
-        rotor_speed = np.arange(0, 2.619, omega_step).tolist()
+        rotor_speed = np.arange(0, 3.219, omega_step).tolist()
         TSR = []
         for i in rotor_speed:
             TSR.append((i*R)/v_w)
@@ -85,11 +85,12 @@ def visualCp():
 
     plt.xlabel('Blade Pitch')
     plt.ylabel('TSR')
-    plt.title('Cp as a function of Blade Pitch and TSR')
-    plt.xlim(0, 30)
+    plt.title('Power Coefficient Surface')
+    plt.xlim(-10, 30)
+    plt.ylim(0, 18)
     plt.show()
     
-    
+
 visualCp()
         
         

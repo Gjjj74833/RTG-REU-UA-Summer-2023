@@ -9,6 +9,8 @@ Betti model implementation
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import bisect
+import time
 
 
 # The model
@@ -78,12 +80,14 @@ def C_p(TSR, beta, performance):
     TSR_list = performance[2]
     
     # Find the closed pitch and TSR value in the list
-    pitch_close = min(pitch_list, key=lambda x: abs(x - beta))
-    TSR_close = min(TSR_list, key=lambda x: abs(x - TSR) )
+    pitch_index = bisect.bisect_left(pitch_list, beta)
+    TSR_index = bisect.bisect_left(TSR_list, TSR)
     
-    # Get the index of the closest pitch and TSR value
-    pitch_index = pitch_list.index(pitch_close)
-    TSR_index = TSR_list.index(TSR_close)
+    # Correct the index if it's out of bounds or if the previous value is closer
+    if pitch_index != 0 and (pitch_index == len(pitch_list) or abs(beta - pitch_list[pitch_index - 1]) < abs(beta - pitch_list[pitch_index])):
+        pitch_index -= 1
+    if TSR_index != 0 and (TSR_index == len(TSR_list) or abs(TSR - TSR_list[TSR_index - 1]) < abs(TSR - TSR_list[TSR_index])):
+        TSR_index -= 1
     
     # Get the C_p value at the index 
     return C_p[TSR_index][pitch_index]
@@ -426,7 +430,6 @@ def WindTurbine(omega_R, v_in, beta, T_E, t, Cp, Cp_type, performance):
     J_R = 35444067 # (kg*m^2) Total inertia of blades, hub and low speed shaft
     rho = 1.225 # (kg/m^3) Density of air
     A = 12469 # (m^2) Rotor area
-    R = 63 # (m) Radius of rotor
     eta_G = 97 # (-) Speed ratio between high and low speed shafts
     
     tildeJ_R = eta_G**2*J_G + J_R
@@ -442,7 +445,7 @@ def WindTurbine(omega_R, v_in, beta, T_E, t, Cp, Cp_type, performance):
     return domega_R
 
 
-def wave(t):
+#def wave(t):
     '''
     def S_PM(f):
         
@@ -598,9 +601,17 @@ def main(end_time, time_step, Cp_type = 0):
         
 
 
-    
+'''
+CPU_start = time.process_time()
+start = time.time()
+main(300, 0.01, 0)
+CPU_end = time.process_time()
+end = time.time()
 
-#main(300, 0.01, 0)
+print("CPU time: ", CPU_end - CPU_start, "seconds")
+print("time: ", end - start, "seconds")
+'''
+
 #performance = process_rotor_performance()
 
 #print(C_p(6.5, 0, performance), Cp(1.2566, 12, 0))
