@@ -51,16 +51,22 @@ def process_rotor_performance(input_file = "Cp_Ct_Cq.NREL5MW.txt"):
         TSR_values = [float(num_str) for num_str in TSR_values_line.split()]
         
         C_p = []
-
         for i in range(12, 12 + len(TSR_values)):
-            c_row = [float(num_str) for num_str in lines[i].split()]
-            C_p.append(c_row)
+            Cp_row = [float(num_str) for num_str in lines[i].split()]
+            C_p.append(Cp_row)
+            
+        C_t = []
+        for i in range(16 + len(TSR_values), 16 + len(TSR_values) + len(TSR_values)):
+            Ct_row = [float(num_str) for num_str in lines[i].split()]
+            C_t.append(Ct_row)
 
-    return C_p, pitch_angles, TSR_values
+    return C_p, C_t, pitch_angles, TSR_values
+
+
 
     
 
-def C_p(TSR, beta, performance):
+def CpCtCq(TSR, beta, performance):
     """
     Find the power coefficient based on the given TSR value and pitch angle
 
@@ -76,8 +82,9 @@ def C_p(TSR, beta, performance):
     beta = np.rad2deg(beta)
 
     C_p = performance[0] 
-    pitch_list = performance[1] 
-    TSR_list = performance[2]
+    C_t = performance[1]
+    pitch_list = performance[2] 
+    TSR_list = performance[3]
     
     # Find the closed pitch and TSR value in the list
     pitch_index = bisect.bisect_left(pitch_list, beta)
@@ -90,10 +97,10 @@ def C_p(TSR, beta, performance):
         TSR_index -= 1
     
     # Get the C_p value at the index 
-    return C_p[TSR_index][pitch_index]
+    return C_p[TSR_index][pitch_index], C_t[TSR_index][pitch_index]
 
 
-def AeroCp(omega_R, v_in, beta):
+def drvCpCtCq(omega_R, v_in, beta):
     """
     Compute the power coefficient. Based on input requirements for 
     AeroDyn v15, we take the rotor speed and relative wind velocity as
@@ -149,7 +156,7 @@ def AeroCp(omega_R, v_in, beta):
         data = lines[8]
         data_list = data.split()
     
-    return float(data_list[4])
+    return float(data_list[4], data_list[6], data_list[5])
 
 
 
@@ -332,12 +339,16 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance):
     TSR = (omega_R*R)/v_in
 
     Cp = 0
-
-    if Cp_type == 0:
-        Cp = C_p(TSR, beta, performance)
-    else:
-        Cp = AeroCp(omega_R, v_in, beta)
+    Ct = 0
     
+    if Cp_type == 0:
+        Cp = CpCtCq(TSR, beta, performance)[0]
+        Ct = CpCtCq(TSR, beta, performance)[1]
+    else:
+        Cp = drvCpCtCq(omega_R, v_in, beta)[0]
+        Ct = drvCpCtCq(omega_R, v_in, beta)[1]
+    
+    '''
     v_root = np.roots([1, v_in, v_in**2, (1 - 2*Cp)*v_in**3])
     
     v_out = None
@@ -353,6 +364,9 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance):
 
     
     FA = 0.5*rho*A*(v_in**2 - v_out**2) + deltaFA
+    '''
+    
+    FA = 0.5*rho*A*Ct*v_in**2
     FAN = 0.5*rho*C_dN*A_N*np.cos(alpha)*(v_w + v_zeta + d_N*omega*np.cos(alpha))**2
     FAT = 0.5*rho*C_dT*h_T*D_T*np.cos(alpha)*(v_w + v_zeta + d_T*omega*np.cos(alpha))**2
     
@@ -424,7 +438,7 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance):
 
 
 
-def WindTurbine(omega_R, v_in, beta, T_E, t, Cp, Cp_type, performance):
+def WindTurbine(omega_R, v_in, beta, T_E, t, Cp, Cp_type):
     # Constants and parameters
     J_G = 534.116 # (kg*m^2) Total inertia of electric generator and high speed shaft
     J_R = 35444067 # (kg*m^2) Total inertia of blades, hub and low speed shaft
@@ -486,7 +500,7 @@ def Betti(x, t, beta, T_E, Cp_type, performance):
     omega_R = x[6]
     
     dx1dt, v_in, Cp = structure(x1, beta, omega_R, t, Cp_type, performance)
-    dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t, Cp, Cp_type, performance)
+    dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t, Cp, Cp_type)
     dxdt = np.append(dx1dt, dx2dt)
     
     return dxdt
@@ -541,10 +555,12 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance):
         x[i][4] = np.rad2deg(x[i][4])
         x[i][5] = np.rad2deg(x[i][5])
         x[i][6] = (60 / (2*np.pi)) * x[i][6]
+        x[i][2] = x[i][2] - 40.612
         if i == n - 1:
             x[i + 1][4] = np.rad2deg(x[i + 1][4])
             x[i + 1][5] = np.rad2deg(x[i + 1][5])
             x[i + 1][6] = (60 / (2*np.pi)) * x[i + 1][6]
+            x[i + 1][2] = x[i + 1][2] - 40.612
     
         count += 1
         #print(count)
@@ -576,7 +592,7 @@ def main(end_time, time_step, Cp_type = 0):
     
     # modify this to change initial condition
     #[zeta, v_zeta, eta, v_eta, alpha, omega, omega_R]
-    x0 = np.array([0, 0, 0, 0, 0, 0, 1])
+    x0 = np.array([0, 0, 40.612, 0, 0, 0, 1])
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
@@ -601,10 +617,10 @@ def main(end_time, time_step, Cp_type = 0):
         
 
 
-'''
+
 CPU_start = time.process_time()
 start = time.time()
-main(300, 0.01, 0)
+main(3000, 0.01, 0)
 CPU_end = time.process_time()
 end = time.time()
 
@@ -612,11 +628,11 @@ print("CPU time: ", CPU_end - CPU_start, "seconds")
 print("time: ", end - start, "seconds")
 '''
 
-#performance = process_rotor_performance()
-
+performance = process_rotor_performance()
+print(performance[1])
 #print(C_p(6.5, 0, performance), Cp(1.2566, 12, 0))
 
 
-
+'''
 
 
