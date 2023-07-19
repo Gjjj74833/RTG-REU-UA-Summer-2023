@@ -8,7 +8,7 @@ Write the power coefficient file
 
 import numpy as np
 import matplotlib.pyplot as plt
-from Betti import AeroCp
+from Betti import drvCpCtCq
 from Betti import process_rotor_performance
 
 def write(pitch_step = 0.1, omega_step = 0.01, v_w = 10):
@@ -49,7 +49,7 @@ def write(pitch_step = 0.1, omega_step = 0.01, v_w = 10):
             line = []
             # For each column (pitch angle value)
             for j in pitch_angle:
-                Cp = AeroCp(i, v_w, np.deg2rad(j))
+                Cp = drvCpCtCq(i, v_w, np.deg2rad(j))[0]
                 line.append(Cp)
                 count[1] += 1
                 print(count)
@@ -104,11 +104,10 @@ def write(pitch_step = 0.1, omega_step = 0.01, v_w = 10):
             lineCq = []
             # For each column (pitch angle value)
             for j in pitch_angle:
-                Cp, Ct, Cq = AeroCpCtCq(i, v_w, np.deg2rad(j))
+                Cp, Ct = drvCpCtCq(i, v_w, np.deg2rad(j))
                 
                 lineCp.append(Cp)
                 lineCt.append(Ct)
-                lineCq.append(Cq)
                 
                 count[1] += 1
                 print(count)
@@ -121,11 +120,6 @@ def write(pitch_step = 0.1, omega_step = 0.01, v_w = 10):
             lineCt_str += "\n"
             Ct_str += lineCt_str
             
-            lineCq_str = ' '.join("{:.6f}".format(num) for num in lineCq)
-            lineCq_str += "\n"
-            Cq_str += lineCq_str
-            #file.write(line_str + "\n")
-            
             count[0] += 1
             count[1] = 0
             
@@ -134,12 +128,9 @@ def write(pitch_step = 0.1, omega_step = 0.01, v_w = 10):
         file.write(" \n")
         file.write(" \n")
         file.write("#  Thrust coefficient \n")
+        file.write(" \n")
         file.write(Ct_str)
-        file.write(" \n")
-        file.write(" \n")
-        file.write("# Torque coefficient \n")
-        file.write(Cq_str)
-                            
+
             
 def visualCp():
     

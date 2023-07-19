@@ -159,8 +159,77 @@ def drvCpCtCq(omega_R, v_in, beta):
     return float(data_list[4], data_list[6], data_list[5])
 
 
+def genWind(v_w, end_time, time_step):
+    """
+    Use Turbsim to generate a wind with turbulence.
 
-def structure(x_1, beta, omega_R, t, Cp_type, performance):
+    Parameters
+    ----------
+    v_w : float
+        the average wind speed
+    end_time : float
+        the time to analysis. Should be consistent with the model driver
+    time_step : float
+        the time step to analysis. Should be consistent with the model driver
+
+    Returns
+    -------
+    horSpd : list
+        A list of horizontal wind speed computed at each step
+
+    """
+    
+    # Replace the path to the Turbsim exe and inp file based on your file location
+    path_exe = "C:/Users/ghhh7/Turbsim/TurbSim.exe"
+    path_inp = "C:/Users/ghhh7/Turbsim/myModel/vonKarm_15.inp"
+    
+    # Open the inp file and overwrite with given parameters
+    with open(path_inp, 'r') as file:
+        lines = file.readlines()
+    
+    # Overwrite "AnalysisTime" and "UsableTime"
+    for i in [20, 21]:
+        line = lines[i].split()
+        line[0] = str(end_time)
+        lines[i] = ' '.join(line) + '\n'
+    
+    # Overwrite the "TimeStep "
+    line = lines[19].split()
+    line[0] = str(time_step)
+    lines[19] = ' '.join(line) + '\n'
+    
+    # Overwrite the average reference wind velocity
+    line = lines[36].split()
+    line[0] = str(v_w)
+    lines[36] = ' '.join(line) + '\n'
+    
+    # Update the input file
+    with open(path_inp, 'w') as file:
+        file.writelines(lines)
+    
+    # Run the Turbsim to generate wind
+    os.system(path_exe + " " + path_inp)
+    
+    # Read the output file
+    path_hh = "C:/Users/ghhh7/Turbsim/myModel/vonKarm_15.hh"
+    
+    with open(path_hh, 'r') as file:
+        lines = file.readlines()
+    
+    # Skip the header
+    data = lines[8:]
+    
+    horSpd = []
+
+    for line in data:
+        columns = line.split()
+        horSpd.append(float(columns[1]))  
+
+    return horSpd
+    
+
+
+def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w):
     """
     The structure of the Betti model
 
@@ -193,7 +262,6 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance):
     beta = blade pitch angle
     """
     # For test, consider constant wind and no wave
-    v_w =10
     
     zeta = x_1[0] # surge (x) position
     v_zeta = x_1[1] # surge velocity
@@ -471,7 +539,7 @@ def WindTurbine(omega_R, v_in, beta, T_E, t, Cp, Cp_type):
     
     
 
-def Betti(x, t, beta, T_E, Cp_type, performance):
+def Betti(x, t, beta, T_E, Cp_type, performance, v_w):
     """
     Combine the WindTurbine model and structure model
     
@@ -499,7 +567,7 @@ def Betti(x, t, beta, T_E, Cp_type, performance):
     x1 = x[:6]
     omega_R = x[6]
     
-    dx1dt, v_in, Cp = structure(x1, beta, omega_R, t, Cp_type, performance)
+    dx1dt, v_in, Cp = structure(x1, beta, omega_R, t, Cp_type, performance, v_w)
     dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t, Cp, Cp_type)
     dxdt = np.append(dx1dt, dx2dt)
     
@@ -507,7 +575,7 @@ def Betti(x, t, beta, T_E, Cp_type, performance):
 
 
 
-def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance):
+def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance, v_w):
     """
     Solve the system of ODEs dx/dt = Betti(x, t) using the fourth-order Runge-Kutta method.
 
@@ -541,14 +609,16 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance):
     t = np.linspace(t0, tf, n)
     x = np.empty((n, len(x0)))
     x[0] = x0
+    
+    v_wind = genWind(v_w, tf, dt)
 
-    count = 0
+    #count = 0
 
     for i in range(n - 1):
-        k1 = Betti(x[i], t[i], beta, T_E, Cp_type, performance)
-        k2 = Betti(x[i] + 0.5 * dt * k1, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance)
-        k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance)
-        k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E, Cp_type, performance)
+        k1 = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i])
+        k2 = Betti(x[i] + 0.5 * dt * k1, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i])
+        k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i])
+        k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E, Cp_type, performance, v_wind[i])
         x[i + 1] = x[i] + dt * (k1 + 2*k2 + 2*k3 + k4) / 6
         
         # Convert pitch anlge, velocity to deg and deg/s, rotor speed to rpm
@@ -561,15 +631,15 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance):
             x[i + 1][5] = np.rad2deg(x[i + 1][5])
             x[i + 1][6] = (60 / (2*np.pi)) * x[i + 1][6]
             x[i + 1][2] = x[i + 1][2] - 40.612
-    
-        count += 1
+
+        #count += 1
         #print(count)
 
-    return t, x
+    return t, x, v_wind[:len(t)]
 
 
 
-def main(end_time, time_step, Cp_type = 0):
+def main(end_time, v_w, time_step = 0.01, Cp_type = 0):
     """
     Cp computation method
 
@@ -585,6 +655,8 @@ def main(end_time, time_step, Cp_type = 0):
     None.
 
     """
+    CPU_start = time.process_time()
+    start = time.time()
     
     performance = process_rotor_performance()
     
@@ -596,11 +668,20 @@ def main(end_time, time_step, Cp_type = 0):
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x = rk4(Betti, x0, start_time, end_time, time_step, 0, 25000, Cp_type, performance)
+    t, x, v_wind = rk4(Betti, x0, start_time, end_time, time_step, 0.4, 43000, Cp_type, performance, v_w)
 
     state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
                    'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
 
+    plt.figure()  # create a new figure for wind velocity
+    plt.plot(t, v_wind)
+    plt.xlabel('Time')
+    plt.ylabel('Wind Speed')
+    plt.title('Time evolution of Wind Speed')
+    plt.grid(True)
+    plt.xlim(0, end_time)
+    plt.show()
+    
     for i in range(x.shape[1]):
         plt.figure()  # create a new figure for each state
         plt.plot(t, x[:, i])
@@ -611,6 +692,12 @@ def main(end_time, time_step, Cp_type = 0):
         plt.xlim(0, end_time)
         plt.show()
         
+    CPU_end = time.process_time()
+    end = time.time()
+    
+    print("CPU time: ", CPU_end - CPU_start, "seconds")
+    print("time: ", end - start, "seconds")
+        
         
 ###############################################################################
 ###############################################################################
@@ -618,20 +705,13 @@ def main(end_time, time_step, Cp_type = 0):
 
 
 
-CPU_start = time.process_time()
-start = time.time()
-main(3000, 0.01, 0)
-CPU_end = time.process_time()
-end = time.time()
+main(1000, 20)
 
-print("CPU time: ", CPU_end - CPU_start, "seconds")
-print("time: ", end - start, "seconds")
+
 '''
-
 performance = process_rotor_performance()
 print(performance[1])
 #print(C_p(6.5, 0, performance), Cp(1.2566, 12, 0))
-
 
 '''
 
