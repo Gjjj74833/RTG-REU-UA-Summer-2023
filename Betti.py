@@ -842,7 +842,7 @@ def run_simulations_parallel(n_simulations, params):
         
     with Pool() as p:
         results = p.map(run_simulation, [params]*n_simulations)
-    
+    '''
     end_time = params[0]
 
     state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
@@ -892,11 +892,28 @@ def run_simulations_parallel(n_simulations, params):
         safe_filename = state_names[state_index].replace('/', '_')  
         plt.savefig(f'{safe_filename}.png', dpi=2000)  
         plt.show()
+    '''
+    return results
+
+
+def plot_quantiles(results):
     
-    #return results
+    
 
+    state = [t[1] for t in results]
+    
+    # Get the central 75%
+    percentile_87_5 =1
+    percentile_12_5 = 2
+    
+    # Get the central 25%
+    percentile_62_5 = 3
+    percentile_37_5 =4
+    
+    # Get the median (50%)
+    percentile_50 =4
 
-
+    pass
 
 
 ########################################
@@ -915,8 +932,8 @@ if __name__ == '__main__':
     '''
   
     
-    run_simulations_parallel(n_simulations, params)
-
+    results = run_simulations_parallel(n_simulations, params)
+    plot_quantiles(results)
     
 '''
 
