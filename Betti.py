@@ -899,19 +899,19 @@ def run_simulations_parallel(n_simulations, params):
 def plot_quantiles(results):
     
     
-
-    state = [t[1] for t in results]
+    # Only take the states part to analyze
+    state = np.stack([t[1] for t in results], axis=2)
     
     # Get the central 75%
-    percentile_87_5 =1
-    percentile_12_5 = 2
+    percentile_87_5 = np.percentile(state, 87.5, axis=2)
+    percentile_12_5 = np.percentile(state, 12.5, axis=2)
     
     # Get the central 25%
-    percentile_62_5 = 3
-    percentile_37_5 =4
+    percentile_62_5 = np.percentile(state, 62.5, axis=2)
+    percentile_37_5 = np.percentile(state, 37.5, axis=2)
     
     # Get the median (50%)
-    percentile_50 =4
+    percentile_50 = np.percentile(state, 50, axis=2)
 
     pass
 
