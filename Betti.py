@@ -896,8 +896,9 @@ def run_simulations_parallel(n_simulations, params):
     return results
 
 
-def plot_quantiles(results):
+def plot_quantiles(results, end_time):
     
+    t = results[0][0]
     
     # Only take the states part to analyze
     state = np.stack([t[1] for t in results], axis=2)
@@ -912,8 +913,25 @@ def plot_quantiles(results):
     
     # Get the median (50%)
     percentile_50 = np.percentile(state, 50, axis=2)
+    
+    state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
+                   'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
+    
+    for i in range(7):
+        plt.figure()
+        plt.fill_between(t, percentile_12_5[:, i], percentile_87_5[:, i], color='b', alpha=0.1)
+        plt.xlabel('Time')
+        plt.ylabel(f'{state_names[i]}')
+        plt.title(f'Time evolution of {state_names[i]}')
+        plt.grid(True)
+        plt.xlim(0, end_time)
+        safe_filename = state_names[i].replace('/', '_')  
+        plt.savefig(f'{safe_filename}.png', dpi=2000)  
+        plt.show()
+        
 
-    pass
+
+    
 
 
 ########################################
@@ -933,7 +951,7 @@ if __name__ == '__main__':
   
     
     results = run_simulations_parallel(n_simulations, params)
-    plot_quantiles(results)
+    plot_quantiles(results, params[0])
     
 '''
 
