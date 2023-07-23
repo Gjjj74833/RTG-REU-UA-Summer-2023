@@ -1,9 +1,9 @@
 
-Predictions were generated on 16-Jul-2023 at 15:30:45 using AeroDyn_driver (v1.02.00a, 12-Apr-2016)
+Predictions were generated on 19-Jul-2023 at 18:27:21 using AeroDyn_driver (v1.02.00a, 12-Apr-2016)
  AeroDyn (v15.04.02a, 10-May-2017)
 
-Case 1: WndSpeed=12.79 m/s; ShearExp=0 ; RotSpeed=18.208 rpm; Pitch=0 deg; Yaw=0 deg; dT=0.1 s; Tmax=0.1 s
+Case 1: WndSpeed=12 m/s; ShearExp=0 ; RotSpeed=12 rpm; Pitch=0 deg; Yaw=0 deg; dT=0.1 s; Tmax=0.1 s
 
      Time           	RtSpeed   	RtTSR     	RtAeroPwr 	RtAeroCp  	RtAeroCq  	RtAeroCt  
       (s)           	(rpm)     	(-)       	(W)       	(-)       	(-)       	(-)       
-         0.0000	  1.820767E+001	  9.409020E+000	  7.361625E+006	  4.654380E-001	  4.946721E-002	  8.903023E-001
+         0.0000	  1.199965E+001	  6.609345E+000	  6.166212E+006	  4.720698E-001	  7.142460E-002	  7.202587E-001
