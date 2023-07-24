@@ -978,7 +978,7 @@ def plot_quantiles(results, end_time):
         plt.figure()
         plt.fill_between(t, percentile_12_5[:, i], percentile_87_5[:, i], color='b', alpha=0.3)
         plt.fill_between(t, percentile_37_5[:, i], percentile_62_5[:, i], color='b', alpha=1)
-        plt.plot(t, percentile_50[:, i], color='r') 
+        plt.plot(t, percentile_50[:, i], color='r', linewidth=1) 
         plt.xlabel('Time')
         plt.ylabel(f'{state_names[i]}')
         plt.title(f'Time evolution of {state_names[i]}')
@@ -986,6 +986,21 @@ def plot_quantiles(results, end_time):
         plt.xlim(start_time, end_time)
         safe_filename = state_names[i].replace('/', '_')  
         plt.savefig(f'{safe_filename}.png', dpi=2000)  
+        plt.show()
+        plt.close()
+        
+        plt.figure()
+        plt.fill_between(t, percentile_12_5[:, i], percentile_87_5[:, i], color='b', alpha=0.3)
+        plt.fill_between(t, percentile_37_5[:, i], percentile_62_5[:, i], color='b', alpha=1)
+        plt.plot(t, percentile_50[:, i], color='r', linewidth=1) 
+        plt.xlabel('Time')
+        plt.ylabel(f'{state_names[i]}')
+        plt.title(f'Time evolution of {state_names[i]}')
+        plt.grid(True)
+        plt.xlim(end_time - 30, end_time)
+        safe_filename = state_names[i].replace('/', '_')  
+        short = ' 30s'
+        plt.savefig(f'{safe_filename + short}.png', dpi=2000)  
         plt.show()
         plt.close()
         
@@ -1041,7 +1056,7 @@ class wind_mutiprocessing:
 if __name__ == '__main__':
     
     v_w = 20
-    end_time = 600
+    end_time = 700
     n_simulations = 50
 
     params = [end_time, v_w]
