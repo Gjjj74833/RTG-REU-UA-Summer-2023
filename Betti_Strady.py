@@ -169,7 +169,7 @@ def drvCpCtCq(omega_R, v_in, beta):
 
 
 
-def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w = 11):
+def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w = 20):
     """
     The structure of the Betti model
 
@@ -448,7 +448,6 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w = 11):
     
     avegQ_t = np.sqrt(Qt_zeta**2+Qt_eta**2)/8
     
-    print(zeta, eta, alpha, avegQ_t)
 
     return np.linalg.inv(E) @ F, v_in, Cp
 
@@ -592,7 +591,7 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance):
         k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance)
         k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E, Cp_type, performance)
         x[i + 1] = x[i] + dt * (k1 + 2*k2 + 2*k3 + k4) / 6
-    '''
+    
     for state in x:
         state[4] = np.rad2deg(state[4])
         state[5] = np.rad2deg(state[5])
@@ -600,7 +599,7 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance):
         
         state[2] = - state[2] + 37.55
         state[0] = - state[0]
-    '''
+    
 
     return t, x
 
@@ -644,7 +643,7 @@ def main(end_time, time_step = 0.01, Cp_type = 0):
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x = rk4(Betti, x0, start_time, end_time, time_step, 0, 28000, Cp_type, performance)
+    t, x = rk4(Betti, x0, start_time, end_time, time_step, 0.35, 43093.55, Cp_type, performance)
     
     state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
                    'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
@@ -675,7 +674,7 @@ def main(end_time, time_step = 0.01, Cp_type = 0):
 ########################################
 ###############################################################################
         
-main(3000)
+main(1000)
 
 
 

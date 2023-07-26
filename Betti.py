@@ -778,7 +778,7 @@ def main(end_time, v_w, v_wind, time_step = 0.01, Cp_type = 0):
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x, v_wind, wave_eta, Q_t = rk4(Betti, x0, start_time, end_time, time_step, 0.4, 43000, Cp_type, performance, v_w, v_wind)
+    t, x, v_wind, wave_eta, Q_t = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind)
     
     # return the output to be ploted
     return t, x, v_wind, wave_eta, Q_t
@@ -872,84 +872,84 @@ def plot_quantiles(results, end_time):
         start_time = end_time - 1000
         
     # Plot wind speed
-    plt.figure()
+    plt.figure(figsize=(12.8, 4.8))
     plt.fill_between(t, wind_percentile_12_5, wind_percentile_87_5, color='b', alpha=0.3, edgecolor='none')
     plt.fill_between(t, wind_percentile_37_5, wind_percentile_62_5, color='b', alpha=1)
     plt.plot(t, wind_percentile_50, color='r', linewidth=1)
-    plt.xlabel('Time')
-    plt.ylabel('Wind Speed')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Wind Speed (m/s)')
     plt.title('Time evolution of Wind Speed')
     plt.grid(True)
     plt.xlim(start_time, end_time)
-    plt.savefig('Wind_Speed.png', dpi=2000)
+    plt.savefig('Wind_Speed.png', dpi=3000)
 
     
     # Plot wave_eta
-    plt.figure()
+    plt.figure(figsize=(12.8, 4.8))
     plt.fill_between(t, wave_percentile_12_5, wave_percentile_87_5, color='b', alpha=0.3, edgecolor='none')
     plt.fill_between(t, wave_percentile_37_5, wave_percentile_62_5, color='b', alpha=1)
     plt.plot(t, wave_percentile_50, color='r', linewidth=1)
-    plt.xlabel('Time')
-    plt.ylabel('Water Surface Elevation at x = 0')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Water Surface Elevation at x = 0 (m)')
     plt.title('Time evolution of Wave Surface Elevation at x = 0')
     plt.grid(True)
     plt.xlim(start_time, end_time)
-    plt.savefig('Wave_Eta.png', dpi=2000)
+    plt.savefig('Wave_Eta.png', dpi=3000)
 
     
     
     # Plot all states
     for i in range(7):
-        plt.figure()
+        plt.figure(figsize=(12.8, 4.8))
         plt.fill_between(t, percentile_12_5[:, i], percentile_87_5[:, i], color='b', alpha=0.3, edgecolor='none')
         plt.fill_between(t, percentile_37_5[:, i], percentile_62_5[:, i], color='b', alpha=1)
         plt.plot(t, percentile_50[:, i], color='r', linewidth=1) 
-        plt.xlabel('Time')
+        plt.xlabel('Time (s)')
         plt.ylabel(f'{state_names[i]}')
         plt.title(f'Time evolution of {state_names[i]}')
         plt.grid(True)
         plt.xlim(start_time, end_time)
         safe_filename = state_names[i].replace('/', '_')  
-        plt.savefig(f'{safe_filename}.png', dpi=2000)  
+        plt.savefig(f'{safe_filename}.png', dpi=3000)  
 
         
-        plt.figure()
+        plt.figure(figsize=(12.8, 4.8))
         plt.fill_between(t, percentile_12_5[:, i], percentile_87_5[:, i], color='b', alpha=0.3, edgecolor='none')
         plt.fill_between(t, percentile_37_5[:, i], percentile_62_5[:, i], color='b', alpha=1)
         plt.plot(t, percentile_50[:, i], color='r', linewidth=1) 
-        plt.xlabel('Time')
+        plt.xlabel('Time (s)')
         plt.ylabel(f'{state_names[i]}')
         plt.title(f'Time evolution of {state_names[i]}')
         plt.grid(True)
         plt.xlim(end_time - 30, end_time)
         safe_filename = state_names[i].replace('/', '_')  
         short = '_30s'
-        plt.savefig(f'{safe_filename + short}.png', dpi=2000)  
+        plt.savefig(f'{safe_filename + short}.png', dpi=3000)  
 
         
     # Plot average tension force on each rod
-    plt.figure()
+    plt.figure(figsize=(12.8, 4.8))
     plt.fill_between(t, Qt_percentile_12_5, Qt_percentile_87_5, color='b', alpha=0.3, edgecolor='none')
     plt.fill_between(t, Qt_percentile_37_5, Qt_percentile_62_5, color='b', alpha=1)
     plt.plot(t, Qt_percentile_50, color='r', linewidth=1)
-    plt.xlabel('Time')
-    plt.ylabel('Averga Tension Force Per Line')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Averga Tension Force Per Line (N)')
     plt.title('Time evolution of Averga Tension Force Per Line')
     plt.grid(True)
     plt.xlim(start_time, end_time)
-    plt.savefig('Tension_force.png', dpi=2000)
+    plt.savefig('Tension_force.png', dpi=3000)
 
     
-    plt.figure()
+    plt.figure(figsize=(12.8, 4.8))
     plt.fill_between(t, Qt_percentile_12_5, Qt_percentile_87_5, color='b', alpha=0.3, edgecolor='none')
     plt.fill_between(t, Qt_percentile_37_5, Qt_percentile_62_5, color='b', alpha=1)
     plt.plot(t, Qt_percentile_50, color='r', linewidth=1)
-    plt.xlabel('Time')
+    plt.xlabel('Time (s)')
     plt.ylabel('Averga Tension Force Per Line')
-    plt.title('Time evolution of Averga Tension Force Per Line')
+    plt.title('Time evolution of Averga Tension Force Per Line (N)')
     plt.grid(True)
     plt.xlim(end_time - 30, end_time)
-    plt.savefig('Tension_force_30s.png', dpi=2000)
+    plt.savefig('Tension_force_30s.png', dpi=3000)
     
     plt.show()
     plt.close()
@@ -966,8 +966,8 @@ if __name__ == '__main__':
     start = time.time()
     
     v_w = 20
-    end_time = 300
-    n_simulations = 500
+    end_time = 600
+    n_simulations = 2000
 
     params = [end_time, v_w]
     
@@ -978,8 +978,15 @@ if __name__ == '__main__':
     print("CPU time: ", CPU_end - CPU_start, "seconds")
     print("time: ", end - start, "seconds")
     
+    CPU_start = time.process_time()
+    start = time.time()
+    
     plot_quantiles(results, params[0])
     
+    CPU_end = time.process_time()
+    end = time.time()
+    print("Plot CPU time: ", CPU_end - CPU_start, "seconds")
+    print("Plot time: ", end - start, "seconds")
 
 
 
