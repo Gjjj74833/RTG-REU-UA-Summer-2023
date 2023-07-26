@@ -312,23 +312,6 @@ def pierson_moskowitz_spectrum(U19_5, zeta, eta, t, random_phases):
     a_y = -np.sum((omega**2) * a * exp_component * sin_component)
 
     return wave_eta, [v_x, v_y, a_x, a_y]
-    '''
-    wave_eta = 0
-    v_x = 0
-    v_y = 0
-    a_x = 0
-    a_y = 0
-    
-    for i in range(N):
-        random_phase = 2*np.pi*random.random()
-        wave_eta += a[i]*np.sin(omega[i]*t - k[i]*zeta + random_phase)
-        v_x = omega[i]*a[i]*np.exp(k[i]*eta)*np.sin(omega[i]*t - k[i]*zeta + random_phase)
-        v_y = omega[i]*a[i]*np.exp(k[i]*eta)*np.cos(omega[i]*t - k[i]*zeta + random_phase)
-        a_x = omega[i]**2*a[i]*np.exp(k[i]*eta)*np.cos(omega[i]*t - k[i]*zeta + random_phase)
-        a_y = -omega[i]**2*a[i]*np.exp(k[i]*eta)*np.sin(omega[i]*t - k[i]*zeta + random_phase)
-
-    return wave_eta, [v_x, v_y, a_x, a_y]
-    '''
 
 
 def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases):
@@ -514,24 +497,6 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_p
         Cp = drvCpCtCq(omega_R, v_in, beta)[0]
         Ct = drvCpCtCq(omega_R, v_in, beta)[1]
     
-    '''
-    v_root = np.roots([1, v_in, v_in**2, (1 - 2*Cp)*v_in**3])
-    
-    v_out = None
-    for i in v_root:
-        if np.isreal(i):
-            v_out = np.real(i)
-            break
-
-    
-    deltaFA = (np.array([v_in, beta]) @ H_delta @ np.array([v_in, beta]).T 
-        + F_delta @ np.array([v_in, beta]).T + C_delta)
-    
-
-    
-    FA = 0.5*rho*A*(v_in**2 - v_out**2) + deltaFA
-    '''
-    
     FA = 0.5*rho*A*Ct*v_in**2
     FAN = 0.5*rho*C_dN*A_N*np.cos(alpha)*(v_w + v_zeta + d_N*omega*np.cos(alpha))**2
     FAT = 0.5*rho*C_dT*h_T*D_T*np.cos(alpha)*(v_w + v_zeta + d_T*omega*np.cos(alpha))**2
@@ -614,8 +579,10 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_p
                   Q_eta - M_d*omega**2*np.cos(alpha), 
                   omega, 
                   Q_alpha])
+    
+    avegQ_t = np.sqrt(Qt_zeta**2+Qt_eta**2)/8
 
-    return np.linalg.inv(E) @ F, v_in, Cp
+    return np.linalg.inv(E) @ F, v_in, Cp, avegQ_t
 
 
 
@@ -700,11 +667,11 @@ def Betti(x, t, beta, T_E, Cp_type, performance, v_w, v_aveg, random_phases):
     x1 = x[:6]
     omega_R = x[6]
     
-    dx1dt, v_in, Cp = structure(x1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases)
+    dx1dt, v_in, Cp, Q_t = structure(x1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases)
     dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t, Cp)
     dxdt = np.append(dx1dt, dx2dt)
     
-    return dxdt
+    return dxdt, Q_t
 
 
 
@@ -745,47 +712,45 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance, v_w, v_wind):
         Each row is a state vector 
     """
     
+    d_BS = 37.550 # (m) The position of center of weight of BS (platform and tower)
+    
     n = int((tf - t0) / dt) + 1
     t = np.linspace(t0, tf, n)
     x = np.empty((n, len(x0)))
     x[0] = x0
+    Qt_list = []
     
     #v_wind = genWind(v_w, tf, dt)
     #v_wind = wind.genWind_mutiprocessing()
     
     random_phases = 2 * np.pi * np.random.rand(400)
 
-    count = 0
-
     for i in range(n - 1):
-        k1 = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)
-        k2 = Betti(x[i] + 0.5 * dt * k1, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)
-        k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)
-        k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)
+        k1, Q_t = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)
+        k2 = Betti(x[i] + 0.5 * dt * k1, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)[0]
+        k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)[0]
+        k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)[0]
         x[i + 1] = x[i] + dt * (k1 + 2*k2 + 2*k3 + k4) / 6
         
-        # Convert pitch anlge, velocity to deg and deg/s, rotor speed to rpm
-        x[i][4] = np.rad2deg(x[i][4])
-        x[i][5] = np.rad2deg(x[i][5])
-        x[i][6] = (60 / (2*np.pi)) * x[i][6]
-        x[i][2] = x[i][2] - 40.612
-        x[i][0] = - x[i][0]
+        Qt_list.append(Q_t)
         
-        count += 1
-        #print(count)
+    last_Qt = Betti(x[-1], t[-1], beta, T_E, Cp_type, performance, v_wind[-1], v_w, random_phases)[1]
+    Qt_list.append(last_Qt)
 
-    x[-1][4] = np.rad2deg(x[-1][4])
-    x[-1][5] = np.rad2deg(x[-1][5])
-    x[-1][6] = (60 / (2*np.pi)) * x[-1][6]
-    x[-1][2] = x[-1][2] - 40.612
-    x[-1][0] = - x[-1][0]            
+    for state in x:
+        state[4] = -np.rad2deg(state[4])
+        state[5] = -np.rad2deg(state[5])
+        state[6] = (60 / (2*np.pi)) * state[6]
+        
+        state[2] = -state[2] + d_BS
+        state[0] = -state[0]
 
     # Output wave elevation at zeta = 0
     wave_eta = []
     for i in t:
         wave_eta.append(pierson_moskowitz_spectrum(v_w, 0, 0, i, random_phases)[0])
 
-    return t, x, v_wind[:len(t)], wave_eta
+    return t, x, v_wind[:len(t)], wave_eta, Qt_list
 
 
 
@@ -812,10 +777,6 @@ def main(end_time, v_w, v_wind, time_step = 0.01, Cp_type = 0):
     wave_eta: list
         The wave elevation at surge = 0 for each time step
     """
-    '''
-    CPU_start = time.process_time()
-    start = time.time()
-    '''
     
     performance = process_rotor_performance()
     
@@ -823,60 +784,15 @@ def main(end_time, v_w, v_wind, time_step = 0.01, Cp_type = 0):
     
     # modify this to change initial condition
     #[zeta, v_zeta, eta, v_eta, alpha, omega, omega_R]
-    x0 = np.array([0, 0, 40.612 - 3, 0, 0, 0, 1])
+    x0 = np.array([-2, 0, 37.550, 0, 0, 0, 1])
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x, v_wind, wave_eta = rk4(Betti, x0, start_time, end_time, time_step, 0.4, 43000, Cp_type, performance, v_w, v_wind)
+    t, x, v_wind, wave_eta, Q_t = rk4(Betti, x0, start_time, end_time, time_step, 0.4, 43000, Cp_type, performance, v_w, v_wind)
     
     # return the output to be ploted
-    return t, x, v_wind, wave_eta
-    '''
-    state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
-                   'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
+    return t, x, v_wind, wave_eta, Q_t
     
-    
-    # Plotting the wind velocity
-    plt.figure() 
-    plt.plot(t, v_wind)
-    plt.xlabel('Time')
-    plt.ylabel('Wind Speed')
-    plt.title('Time evolution of Wind Speed')
-    plt.grid(True)
-    plt.xlim(end_time -1000, end_time)
-    plt.savefig('wind_speed.png', dpi=600)  
-    plt.show()
-    
-    # Plotting the sea surface elevation
-    plt.figure()
-    plt.plot(t, wave_eta)
-    plt.title('Time evolution of Sea Surface Elevation at position x')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Elevation (m)')
-    plt.grid(True)
-    plt.xlim(end_time - 1000, end_time)
-    plt.savefig('wave.png', dpi=600) 
-    plt.show()
-    
-    for i in range(x.shape[1]):
-        plt.figure()  # create a new figure for each state
-        plt.plot(t, x[:, i])
-        plt.xlabel('Time')
-        plt.ylabel(f'{state_names[i]}')
-        plt.title(f'Time evolution of {state_names[i]}')
-        plt.grid(True)
-        plt.xlim(end_time - 1000, end_time)
-        safe_filename = state_names[i].replace('/', '_')  
-        plt.savefig(f'{safe_filename}.png', dpi=600)  
-        plt.show()
-        
-    CPU_end = time.process_time()
-    end = time.time()
-    
-    print("CPU time: ", CPU_end - CPU_start, "seconds")
-    print("time: ", end - start, "seconds")
-    '''
-
 
 def run_simulation(params):
     return main(*params)
@@ -884,6 +800,7 @@ def run_simulation(params):
 
 def run_simulations_parallel(n_simulations, params):
     
+
     vWind = []
     for i in range(n_simulations):
         vWind.append(genWind(v_w, params[0], 0.01))
@@ -893,58 +810,7 @@ def run_simulations_parallel(n_simulations, params):
         all_params = [params + [vWind[i]] for i in range(n_simulations)]
         
         results = p.map(run_simulation, all_params)
-    
 
-    color = (0, 0, 1, 0.2)
-
-    
-    # Plotting the wind velocity
-    plt.figure() 
-    for i, result in enumerate(results):
-        t, _, v_wind, _ = result
-        plt.plot(t, v_wind, color=color)
-    plt.xlabel('Time')
-    plt.ylabel('Wind Speed')
-    plt.title('Time evolution of Wind Speed')
-    plt.grid(True)
-    plt.xlim(0, end_time)
-    plt.savefig('wind_speed.png', dpi=2000)  
-    plt.show()
-
-    
-    # Plotting the sea surface elevation
-    plt.figure()
-    for i, result in enumerate(results):
-        t, _, _, wave_eta = result
-        plt.plot(t, wave_eta, color=color)
-    plt.title('Time evolution of Sea Surface Elevation at position x')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Elevation (m)')
-    plt.grid(True)
-    plt.xlim(0, end_time)
-    plt.savefig('wave.png', dpi=2000) 
-    plt.show()
-
-    '''
-    end_time = params[0]
-
-    state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
-                   'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
-    
-    for state_index in range(len(state_names)):
-        plt.figure()  # create a new figure for each state
-        for i, result in enumerate(results):
-            t, x, _, _ = result
-            plt.plot(t, x[:, state_index], color=color)
-        plt.xlabel('Time')
-        plt.ylabel(f'{state_names[state_index]}')
-        plt.title(f'Time evolution of {state_names[state_index]}')
-        plt.grid(True)
-        plt.xlim(0, end_time)
-        safe_filename = state_names[state_index].replace('/', '_')  
-        plt.savefig(f'{safe_filename}.png', dpi=2000)  
-        plt.show()
-    '''
     return results
 
 
@@ -954,17 +820,58 @@ def plot_quantiles(results, end_time):
     
     # Only take the states part to analyze
     state = np.stack([t[1] for t in results], axis=2)
+    wind_speed = np.stack([t[2] for t in results], axis=1)
+    wave_eta = np.stack([t[3] for t in results], axis=1)
+    Q_t = np.stack([t[4] for t in results], axis=1)
     
-    # Get the central 75%
+    
+    # Get the central 75% ####################
+    # States
     percentile_87_5 = np.percentile(state, 87.5, axis=2)
     percentile_12_5 = np.percentile(state, 12.5, axis=2)
     
-    # Get the central 25%
+    # Wind speed
+    wind_percentile_87_5 = np.percentile(wind_speed, 87.5, axis=1)
+    wind_percentile_12_5 = np.percentile(wind_speed, 12.5, axis=1)
+    
+    # Wave elevation
+    wave_percentile_87_5 = np.percentile(wave_eta, 87.5, axis=1)
+    wave_percentile_12_5 = np.percentile(wave_eta, 12.5, axis=1)
+    
+    # Tension force
+    Qt_percentile_87_5 = np.percentile(Q_t, 87.5, axis=1)
+    Qt_percentile_12_5 = np.percentile(Q_t, 12.5, axis=1)
+    
+    # Get the central 25% ####################
+    # States
     percentile_62_5 = np.percentile(state, 62.5, axis=2)
     percentile_37_5 = np.percentile(state, 37.5, axis=2)
     
-    # Get the median (50%)
+    # Wind speed
+    wind_percentile_62_5 = np.percentile(wind_speed, 62.5, axis=1)
+    wind_percentile_37_5 = np.percentile(wind_speed, 37.5, axis=1)
+    
+    # Wave elevation
+    wave_percentile_62_5 = np.percentile(wave_eta, 62.5, axis=1)
+    wave_percentile_37_5 = np.percentile(wave_eta, 37.5, axis=1)
+    
+    # Tension force
+    Qt_percentile_62_5 = np.percentile(Q_t, 62.5, axis=1)
+    Qt_percentile_37_5 = np.percentile(Q_t, 37.5, axis=1)
+    
+    # Get the median (50%) ####################
+    # States
     percentile_50 = np.percentile(state, 50, axis=2)
+    
+    # Wind speed
+    wind_percentile_50 = np.percentile(wind_speed, 50, axis=1)
+    
+    # Wave elevation
+    wave_percentile_50 = np.percentile(wave_eta, 50, axis=1)
+    
+    # Tension force
+    Qt_percentile_50 = np.percentile(Q_t, 50, axis=1)
+
     
     state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
                    'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
@@ -973,10 +880,38 @@ def plot_quantiles(results, end_time):
     
     if end_time > 1000:
         start_time = end_time - 1000
+        
+    # Plot wind speed
+    plt.figure()
+    plt.fill_between(t, wind_percentile_12_5, wind_percentile_87_5, color='b', alpha=0.3, edgecolor='none')
+    plt.fill_between(t, wind_percentile_37_5, wind_percentile_62_5, color='b', alpha=1)
+    plt.plot(t, wind_percentile_50, color='r', linewidth=1)
+    plt.xlabel('Time')
+    plt.ylabel('Wind Speed')
+    plt.title('Time evolution of Wind Speed')
+    plt.grid(True)
+    plt.xlim(start_time, end_time)
+    plt.savefig('Wind_Speed.png', dpi=2000)
+
     
+    # Plot wave_eta
+    plt.figure()
+    plt.fill_between(t, wave_percentile_12_5, wave_percentile_87_5, color='b', alpha=0.3, edgecolor='none')
+    plt.fill_between(t, wave_percentile_37_5, wave_percentile_62_5, color='b', alpha=1)
+    plt.plot(t, wave_percentile_50, color='r', linewidth=1)
+    plt.xlabel('Time')
+    plt.ylabel('Water Surface Elevation at x = 0')
+    plt.title('Time evolution of Wave Surface Elevation at x = 0')
+    plt.grid(True)
+    plt.xlim(start_time, end_time)
+    plt.savefig('Wave_Eta.png', dpi=2000)
+
+    
+    
+    # Plot all states
     for i in range(7):
         plt.figure()
-        plt.fill_between(t, percentile_12_5[:, i], percentile_87_5[:, i], color='b', alpha=0.3)
+        plt.fill_between(t, percentile_12_5[:, i], percentile_87_5[:, i], color='b', alpha=0.3, edgecolor='none')
         plt.fill_between(t, percentile_37_5[:, i], percentile_62_5[:, i], color='b', alpha=1)
         plt.plot(t, percentile_50[:, i], color='r', linewidth=1) 
         plt.xlabel('Time')
@@ -986,11 +921,10 @@ def plot_quantiles(results, end_time):
         plt.xlim(start_time, end_time)
         safe_filename = state_names[i].replace('/', '_')  
         plt.savefig(f'{safe_filename}.png', dpi=2000)  
-        plt.show()
-        plt.close()
+
         
         plt.figure()
-        plt.fill_between(t, percentile_12_5[:, i], percentile_87_5[:, i], color='b', alpha=0.3)
+        plt.fill_between(t, percentile_12_5[:, i], percentile_87_5[:, i], color='b', alpha=0.3, edgecolor='none')
         plt.fill_between(t, percentile_37_5[:, i], percentile_62_5[:, i], color='b', alpha=1)
         plt.plot(t, percentile_50[:, i], color='r', linewidth=1) 
         plt.xlabel('Time')
@@ -999,53 +933,36 @@ def plot_quantiles(results, end_time):
         plt.grid(True)
         plt.xlim(end_time - 30, end_time)
         safe_filename = state_names[i].replace('/', '_')  
-        short = ' 30s'
+        short = '_30s'
         plt.savefig(f'{safe_filename + short}.png', dpi=2000)  
-        plt.show()
-        plt.close()
+
         
-'''
+    # Plot average tension force on each rod
+    plt.figure()
+    plt.fill_between(t, Qt_percentile_12_5, Qt_percentile_87_5, color='b', alpha=0.3, edgecolor='none')
+    plt.fill_between(t, Qt_percentile_37_5, Qt_percentile_62_5, color='b', alpha=1)
+    plt.plot(t, Qt_percentile_50, color='r', linewidth=1)
+    plt.xlabel('Time')
+    plt.ylabel('Averga Tension Force Per Line')
+    plt.title('Time evolution of Averga Tension Force Per Line')
+    plt.grid(True)
+    plt.xlim(start_time, end_time)
+    plt.savefig('Tension_force.png', dpi=2000)
 
-class wind_mutiprocessing:
     
-    def __init__(self, v_w, end_time, n_simulations, time_step=0.01 ):
-        """
-        This function generate wind for n simulations before fun the model.
-        It will store the wind generated for each simulation in a 2D list.
-        """
-        self.index = 0
-        self.vWind = []
-        for i in range(n_simulations):
-            self.vWind.append(genWind(v_w, end_time, time_step))
-            
+    plt.figure()
+    plt.fill_between(t, Qt_percentile_12_5, Qt_percentile_87_5, color='b', alpha=0.3, edgecolor='none')
+    plt.fill_between(t, Qt_percentile_37_5, Qt_percentile_62_5, color='b', alpha=1)
+    plt.plot(t, Qt_percentile_50, color='r', linewidth=1)
+    plt.xlabel('Time')
+    plt.ylabel('Averga Tension Force Per Line')
+    plt.title('Time evolution of Averga Tension Force Per Line')
+    plt.grid(True)
+    plt.xlim(end_time - 30, end_time)
+    plt.savefig('Tension_force_30s.png', dpi=2000)
     
-    def genWind_mutiprocessing(self):
-        """
-        Everytime this function get called, it will return on wind in vWind_parallel
-        and remove that wind from vWind_parallel.
-
-        Parameters
-        ----------
-        v_w : TYPE
-            DESCRIPTION.
-        end_time : TYPE
-            DESCRIPTION.
-        time_step : TYPE
-            DESCRIPTION.
-        n_simulations : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
-        """
-        wind = self.vWind[self.index]
-        self.index += 1
-        return wind
-
-'''
-    
+    plt.show()
+    plt.close()
 
 
 ########################################
@@ -1055,21 +972,24 @@ class wind_mutiprocessing:
 
 if __name__ == '__main__':
     
+    CPU_start = time.process_time()
+    start = time.time()
+    
     v_w = 20
-    end_time = 700
-    n_simulations = 50
+    end_time = 300
+    n_simulations = 500
 
     params = [end_time, v_w]
     
     results = run_simulations_parallel(n_simulations, params)
+    
+    CPU_end = time.process_time()
+    end = time.time()
+    print("CPU time: ", CPU_end - CPU_start, "seconds")
+    print("time: ", end - start, "seconds")
+    
     plot_quantiles(results, params[0])
     
-
-
-#performance = process_rotor_performance()
-
-#print(CpCtCq(-10.08, -5, performance), drvCpCtCq(1.2566, 12, 0))
-
 
 
 
