@@ -11,11 +11,8 @@ import matplotlib.pyplot as plt
 import os
 import bisect
 import time
-import random
 from multiprocessing import Pool
 
-
-# The model
 
 def process_rotor_performance(input_file = "Cp_Ct.NREL5MW.txt"):
     """
@@ -66,9 +63,6 @@ def process_rotor_performance(input_file = "Cp_Ct.NREL5MW.txt"):
 
     return C_p, C_t, pitch_angles, TSR_values
 
-
-
-    
 
 def CpCtCq(TSR, beta, performance):
     """
@@ -248,7 +242,6 @@ def genWind(v_w, end_time, time_step):
         horSpd.append(float(columns[1]))  
 
     return horSpd
-
 
 
 def pierson_moskowitz_spectrum(U19_5, zeta, eta, t, random_phases):
@@ -585,7 +578,6 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_p
     return np.linalg.inv(E) @ F, v_in, Cp, avegQ_t
 
 
-
 def WindTurbine(omega_R, v_in, beta, T_E, t, Cp):
     """
     The drivetrain model 
@@ -674,7 +666,6 @@ def Betti(x, t, beta, T_E, Cp_type, performance, v_w, v_aveg, random_phases):
     return dxdt, Q_t
 
 
-
 def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance, v_w, v_wind):
     """
     Solve the system of ODEs dx/dt = Betti(x, t) using the fourth-order Runge-Kutta method.
@@ -751,7 +742,6 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance, v_w, v_wind):
         wave_eta.append(pierson_moskowitz_spectrum(v_w, 0, 0, i, random_phases)[0])
 
     return t, x, v_wind[:len(t)], wave_eta, Qt_list
-
 
 
 def main(end_time, v_w, v_wind, time_step = 0.01, Cp_type = 0):
@@ -965,7 +955,7 @@ def plot_quantiles(results, end_time):
     plt.close()
 
 
-########################################
+###############################################################################
 ###############################################################################
         
 
