@@ -711,9 +711,6 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance, v_w, v_wind):
     x[0] = x0
     Qt_list = []
     
-    #v_wind = genWind(v_w, tf, dt)
-    #v_wind = wind.genWind_mutiprocessing()
-    
     random_phases = 2 * np.pi * np.random.rand(400)
 
     for i in range(n - 1):
@@ -727,14 +724,19 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance, v_w, v_wind):
         
     last_Qt = Betti(x[-1], t[-1], beta, T_E, Cp_type, performance, v_wind[-1], v_w, random_phases)[1]
     Qt_list.append(last_Qt)
+    
+    Qt_list = np.array(Qt_list)
+    Qt_list =  -Qt_list
 
     for state in x:
-        state[4] = -np.rad2deg(state[4])
-        state[5] = -np.rad2deg(state[5])
-        state[6] = (60 / (2*np.pi)) * state[6]
+        state[4] = -np.rad2deg(state[4]) # convert pitch angle to deg
+        state[5] = -np.rad2deg(state[5]) # convert pitch angle to dag/s
+        state[6] = (60 / (2*np.pi)) * state[6] # convert rotor speed to rpm
         
         state[2] = -state[2] + d_BS
         state[0] = -state[0]
+        state[1] = -state[1] 
+        state[3] = -state[3]
 
     # Output wave elevation at zeta = 0
     wave_eta = []
@@ -744,7 +746,7 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance, v_w, v_wind):
     return t, x, v_wind[:len(t)], wave_eta, Qt_list
 
 
-def main(end_time, v_w, v_wind, time_step = 0.01, Cp_type = 0):
+def main(end_time, v_w, x0, v_wind, time_step = 0.01, Cp_type = 0):
     """
     Cp computation method
 
@@ -774,7 +776,6 @@ def main(end_time, v_w, v_wind, time_step = 0.01, Cp_type = 0):
     
     # modify this to change initial condition
     #[zeta, v_zeta, eta, v_eta, alpha, omega, omega_R]
-    x0 = np.array([-2, 0, 37.550, 0, 0, 0, 1])
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
@@ -791,9 +792,31 @@ def run_simulation(params):
 def run_simulations_parallel(n_simulations, params):
     
 
+    x0 = np.array([-2, 0, 37.550, 0, 0, 0, 1])
+    
+    d_BS = 37.550 # (m) The position of center of weight of BS (platform and tower)
+    
+    # Initial condition selection
+    first_wind = genWind(params[1], 3000, 0.01)
+    first_results = main(3000, params[1], x0, first_wind)[1]
+    
+    state = first_results[-1]
+    
+
+    state[4] = -np.deg2rad(state[4]) 
+    state[5] = -np.deg2rad(state[5]) 
+    state[6] = ((2*np.pi) / 60) * state[6] 
+    
+    state[2] = -state[2] + d_BS 
+    state[0] = -state[0] 
+    state[1] = -state[1] 
+    state[3] = -state[3]
+    
+    params.append(state)
+
     vWind = []
     for i in range(n_simulations):
-        vWind.append(genWind(v_w, params[0], 0.01))
+        vWind.append(genWind(params[1], params[0], 0.01))
         
     with Pool() as p:
         
@@ -881,7 +904,7 @@ def plot_quantiles(results, end_time):
     plt.title('Time evolution of Wind Speed')
     plt.grid(True)
     plt.xlim(start_time, end_time)
-    plt.savefig('Wind_Speed.png', dpi=3000)
+    plt.savefig('Wind_Speed.png', dpi=2000)
 
     
     # Plot wave_eta
@@ -894,7 +917,7 @@ def plot_quantiles(results, end_time):
     plt.title('Time evolution of Wave Surface Elevation at x = 0')
     plt.grid(True)
     plt.xlim(start_time, end_time)
-    plt.savefig('Wave_Eta.png', dpi=3000)
+    plt.savefig('Wave_Eta.png', dpi=2000)
 
     
     
@@ -910,7 +933,7 @@ def plot_quantiles(results, end_time):
         plt.grid(True)
         plt.xlim(start_time, end_time)
         safe_filename = state_names[i].replace('/', '_')  
-        plt.savefig(f'{safe_filename}.png', dpi=3000)  
+        plt.savefig(f'{safe_filename}.png', dpi=2000)  
 
         
         plt.figure(figsize=(12.8, 4.8))
@@ -924,7 +947,7 @@ def plot_quantiles(results, end_time):
         plt.xlim(end_time - 30, end_time)
         safe_filename = state_names[i].replace('/', '_')  
         short = '_30s'
-        plt.savefig(f'{safe_filename + short}.png', dpi=3000)  
+        plt.savefig(f'{safe_filename + short}.png', dpi=2000)  
 
         
     # Plot average tension force on each rod
@@ -937,7 +960,7 @@ def plot_quantiles(results, end_time):
     plt.title('Time evolution of Averga Tension Force Per Line')
     plt.grid(True)
     plt.xlim(start_time, end_time)
-    plt.savefig('Tension_force.png', dpi=3000)
+    plt.savefig('Tension_force.png', dpi=2000)
 
     
     plt.figure(figsize=(12.8, 4.8))
@@ -949,7 +972,7 @@ def plot_quantiles(results, end_time):
     plt.title('Time evolution of Averga Tension Force Per Line (N)')
     plt.grid(True)
     plt.xlim(end_time - 30, end_time)
-    plt.savefig('Tension_force_30s.png', dpi=3000)
+    plt.savefig('Tension_force_30s.png', dpi=2000)
     
     plt.show()
     plt.close()
