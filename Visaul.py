@@ -107,9 +107,8 @@ def visual(data_dict, header_units_map, key, key_x = "Time"):
     
 data_dict, unit_dict = readOutFiles()
 
-visual(data_dict, unit_dict, "RtTSR")
-visual(data_dict, unit_dict, "RtAeroCp")
-visual(data_dict, unit_dict, "PtfmSurge")
+visual(data_dict, unit_dict, "GenTq")
+
 
     
     

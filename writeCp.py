@@ -109,11 +109,14 @@ def visualCp():
     performance = process_rotor_performance()
         
     C_p = performance[0] 
+
     pitch_list = performance[2] 
     TSR_list = performance[3]
     
+    
     C_p = np.ma.masked_less(C_p, 0)
     
+    #pitch, TSR = np.meshgrid(pitch_list, TSR_list)
     pitch, TSR = np.meshgrid(pitch_list, TSR_list)
     
     plt.figure()
@@ -124,16 +127,65 @@ def visualCp():
     contour_lines = plt.contour(pitch, TSR, C_p, colors='black')
     plt.clabel(contour_lines, inline=True, fontsize=8)  # Add labels to the contour lines
 
-    plt.xlabel('Blade Pitch')
-    plt.ylabel('TSR')
-    plt.title('Power Coefficient Surface')
-    plt.xlim(-10, 30)
+    plt.xlabel('Blade Pitch angle (deg)')
+    plt.ylabel('Wind Speed (m/s)')
+    plt.title('Thurst Coefficient Surface')
+    plt.xlim(-5, 30)
     plt.ylim(0, 18)
+    #plt.savefig('Ct surface.png')
     plt.show()
+    plt.close()
     
-
-write()
+def visualCt():
+    """
+    Plot the power coefficient surface
+    """
+    
+    performance = process_rotor_performance()
         
+
+    C_t = performance[1] 
+    pitch_list = performance[2] 
+    TSR_list = performance[3]
+    
+    C_t = np.array(C_t)
+    pitch_list = np.array(pitch_list)
+    TSR_list = np.array(TSR_list)
+
+    
+    C_t = np.ma.masked_less(C_t, 0)
+
+    # Creating a boolean mask for TSR values
+    mask = (TSR_list >= 3) & (TSR_list <= 16)
+
+    # Applying the mask
+    TSR_list = TSR_list[mask]
+
+    C_t = C_t[mask]
+    
+    TSR_list = 79.168/TSR_list
+    
+    pitch, TSR = np.meshgrid(pitch_list, TSR_list)
+    
+    plt.figure()
+    c = plt.pcolormesh(pitch, TSR, C_t, cmap='viridis')  # using viridis colormap
+    plt.colorbar(c, label='Cp value')
+
+    contour_lines = plt.contour(pitch, TSR, C_t, colors='black')
+    #plt.clabel(contour_lines, inline=True, fontsize=8)
+    #plt.clabel(contour_lines, inline=True, fontsize=8, fmt='%1.2f')
+
+
+    plt.xlabel('Blade Pitch angle (deg)')
+    plt.ylabel('Wind Speed (m/s)')
+    plt.title('Thrust Coefficient Surface at Rotor Speed 12 rpm')
+    plt.xlim(0, 20)
+    plt.ylim(5, 25)  # Changing the y-limit to match your TSR range
+    plt.savefig('Ct surface.png', dpi=2000)
+    plt.show()
+    plt.close()
+
+visualCt()
         
         
         

@@ -446,8 +446,6 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w = 20):
                   omega, 
                   Q_alpha])
     
-    avegQ_t = np.sqrt(Qt_zeta**2+Qt_eta**2)/8
-    
 
     return np.linalg.inv(E) @ F, v_in, Cp
 
@@ -593,13 +591,14 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance):
         x[i + 1] = x[i] + dt * (k1 + 2*k2 + 2*k3 + k4) / 6
     
     for state in x:
-        state[4] = np.rad2deg(state[4])
-        state[5] = np.rad2deg(state[5])
-        state[6] = (60 / (2*np.pi)) * state[6]
+        state[4] = -np.rad2deg(state[4]) # convert pitch angle to deg
+        state[5] = -np.rad2deg(state[5]) # convert pitch angle to dag/s
+        state[6] = (60 / (2*np.pi)) * state[6] # convert rotor speed to rpm
         
-        state[2] = - state[2] + 37.55
-        state[0] = - state[0]
-    
+        state[2] = -state[2] + 37.55
+        state[0] = -state[0]
+        state[1] = -state[1] 
+        state[3] = -state[3]
 
     return t, x
 
@@ -639,34 +638,67 @@ def main(end_time, time_step = 0.01, Cp_type = 0):
     
     # modify this to change initial condition
     #[zeta, v_zeta, eta, v_eta, alpha, omega, omega_R]
-    x0 = np.array([-4.5, 0, 37.55, 0, 0, 0, 1])
+    x0 = np.array([0, 1, 30.55, -5, 0, 0, 1])
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x = rk4(Betti, x0, start_time, end_time, time_step, 0.35, 43093.55, Cp_type, performance)
+    t, x = rk4(Betti, x0, start_time, end_time, time_step, 0.31, 43093.55, Cp_type, performance)
+    #t, x = rk4(Betti, x0, start_time, end_time, time_step, 0, 40000, Cp_type, performance)
+    
+
     
     state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
                    'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
     
     
     for i in range(x.shape[1]):
-        plt.figure()  # create a new figure for each state
+        plt.figure(figsize=(6.4, 2.4))  # create a new figure for each state
         plt.plot(t, x[:, i])
         plt.xlabel('Time')
         plt.ylabel(f'{state_names[i]}')
         plt.title(f'Time evolution of {state_names[i]}')
         plt.grid(True)
         plt.xlim(0, end_time)
-        #safe_filename = state_names[i].replace('/', '_')  
-        #plt.savefig(f'{safe_filename}.png', dpi=600)  
+        safe_filename = state_names[i].replace('/', '_')  
+        plt.savefig(f'Steady_Results/{safe_filename}.png', dpi=600)
         plt.show()
-        
+    '''
+    # Determine the number of rows needed for the subplots
+    num_rows = int(np.ceil(x.shape[1] / 2))
+    
+    # Create a grid of subplots with the calculated number of rows and 2 columns
+    fig, axs = plt.subplots(num_rows, 2, figsize=(6.4 * 2, 2.4 * num_rows))
+    axs = axs.flatten()  # Flatten the array of axes so we can iterate over it
+    
+    # Loop over each state
+    for i in range(x.shape[1]):
+        # Plot the state in its own subplot
+        axs[i].plot(t, x[:, i])
+        axs[i].set_xlabel('Time (s)')
+        axs[i].set_ylabel(f'{state_names[i]}')
+        axs[i].set_title(f'Time evolution of {state_names[i]}')
+        axs[i].grid(True)
+        axs[i].set_xlim(0, end_time)
+    
+    # If there are an odd number of states, delete the last (empty) subplot
+    if x.shape[1] % 2:
+        fig.delaxes(axs[-1])
+    
+    # Use tight_layout to prevent overlap between subplots
+    plt.tight_layout()
+    
+    # Save the full plot to a file
+    plt.savefig('Steady_Results/combined_plot.png', dpi=600)
+    
+    plt.show()
+    '''
     CPU_end = time.process_time()
     end = time.time()
     
     print("CPU time: ", CPU_end - CPU_start, "seconds")
     print("time: ", end - start, "seconds")
     
+    return t, x
 
 
 
@@ -674,7 +706,7 @@ def main(end_time, time_step = 0.01, Cp_type = 0):
 ########################################
 ###############################################################################
         
-main(1000)
+t, x = main(2500)
 
 
 

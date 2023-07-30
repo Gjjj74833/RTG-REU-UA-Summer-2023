@@ -982,7 +982,7 @@ def plot_quantiles(results, end_time):
 ###############################################################################
         
 
-
+'''
 if __name__ == '__main__':
     
     CPU_start = time.process_time()
@@ -1011,5 +1011,5 @@ if __name__ == '__main__':
     print("Plot CPU time: ", CPU_end - CPU_start, "seconds")
     print("Plot time: ", end - start, "seconds")
 
-
+'''
 

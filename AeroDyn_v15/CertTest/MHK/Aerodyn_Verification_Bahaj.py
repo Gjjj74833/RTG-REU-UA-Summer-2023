@@ -21,9 +21,9 @@ Ct_curve=[0]*NumCases
 #########################################################################################################################
 # Run the AeroDyn model #################################################################################################
 
-print "  "
-print "Running AeroDyn model....."
-print "  "
+print("  ")
+print("Running AeroDyn model.....")
+print("  ")
 
 os.system('AeroDyn_Driver_Win32.exe       Bahaj_MHK_driver.dvr')      #Execute the AeroDyn driver
 

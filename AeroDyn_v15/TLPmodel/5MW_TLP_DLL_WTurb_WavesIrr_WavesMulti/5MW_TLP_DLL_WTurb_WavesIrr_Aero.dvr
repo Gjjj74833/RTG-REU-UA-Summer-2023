@@ -16,8 +16,7 @@ True          TabDel          - When generating formatted output (OutForm=True),
 "ES15.6E3"    OutFmt          - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
 True          Beep            - Beep on exit (flag)
 -----  Combined-Case Analysis  -------------------------------------------------
-         2    NumCases        - Number of cases to run
+         1    NumCases        - Number of cases to run
 WndSpeed	ShearExp	RotSpd	Pitch	Yaw			dT		Tmax
 (m/s)			(-)		(rpm)	(deg)	(deg)		(s)		(s)
-12 			0.00E+00 	  15 	 5 	0.00E+00 	0.1 	0.1
-18 			0.00E+00 	  15 	 5 	0.00E+00 	0.1 	0.1
+12 0.00E+00 11.999646089356542 0 0.00E+00 0.1 0.1
