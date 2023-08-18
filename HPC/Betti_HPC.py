@@ -193,8 +193,9 @@ def genWind(v_w, end_time, time_step):
     #path_exe = "C:/Users/ghhh7/Turbsim/TurbSim.exe"
     #path_inp = "C:/Users/ghhh7/Turbsim/myModel/vonKarm_15.inp"
     
-    path_exe = "Turbsim/TurbSim.exe"
-    path_inp = "Turbsim/myModel/vonKarm_15.inp"
+    path_exe = "TurbSim_2.0/bin/TurbSim_x64.exe"
+    path_inp = "TurbSim.inp"
+    
     
     # Open the inp file and overwrite with given parameters
     with open(path_inp, 'r') as file:
@@ -230,6 +231,7 @@ def genWind(v_w, end_time, time_step):
     
     # Run the Turbsim to generate wind
     os.system(path_exe + " " + path_inp)
+
     
     # Read the output file
     #path_hh = "C:/Users/ghhh7/Turbsim/myModel/vonKarm_15.hh"
@@ -1083,16 +1085,16 @@ def save_binaryfile(results):
     # Tension force
     Qt_percentile_50 = np.percentile(Q_t, 50, axis=1)
     
-    np.savez('results.npz', array_1 = percentile_87_5, array_2 = percentile_12_5,
-                 array_3 = wind_percentile_87_5, array_4 = wind_percentile_12_5,
-                 array_5 = wave_percentile_87_5, array_6 = wave_percentile_12_5,
-                 array_7 = Qt_percentile_87_5, array_8 = Qt_percentile_12_5,
-                 array_9 = percentile_62_5, array_10 = percentile_37_5,
-                 array_11 = wind_percentile_62_5, array_12 = wind_percentile_37_5,
-                 array_13 = wave_percentile_62_5, array_14 = wave_percentile_37_5,
-                 array_15 = Qt_percentile_62_5, array_16 = Qt_percentile_37_5,
-                 array_17 = percentile_50, array_18 = wind_percentile_50,
-                 array_19 = wave_percentile_50, array_20 = Qt_percentile_50)
+    np.savez('/results/results.npz',array_1 = t, array_2 = percentile_87_5, array_3 = percentile_12_5,
+                 array_4 = wind_percentile_87_5, array_5 = wind_percentile_12_5,
+                 array_6 = wave_percentile_87_5, array_7 = wave_percentile_12_5,
+                 array_8 = Qt_percentile_87_5, array_9 = Qt_percentile_12_5,
+                 array_10 = percentile_62_5, array_11 = percentile_37_5,
+                 array_12 = wind_percentile_62_5, array_13 = wind_percentile_37_5,
+                 array_14 = wave_percentile_62_5, array_15 = wave_percentile_37_5,
+                 array_16 = Qt_percentile_62_5, array_17 = Qt_percentile_37_5,
+                 array_18 = percentile_50, array_19 = wind_percentile_50,
+                 array_20 = wave_percentile_50, array_21 = Qt_percentile_50)
 
 
 ###############################################################################
