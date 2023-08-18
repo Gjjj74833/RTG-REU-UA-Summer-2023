@@ -127,12 +127,12 @@ def visualCp():
     contour_lines = plt.contour(pitch, TSR, C_p, colors='black')
     plt.clabel(contour_lines, inline=True, fontsize=8)  # Add labels to the contour lines
 
-    plt.xlabel('Blade Pitch angle (deg)')
-    plt.ylabel('Wind Speed (m/s)')
-    plt.title('Thurst Coefficient Surface')
+    plt.xlabel('Blade pitch angle (deg)')
+    plt.ylabel('Tip speed ratio')
+    plt.title('Power Coefficient Surface')
     plt.xlim(-5, 30)
     plt.ylim(0, 18)
-    #plt.savefig('Ct surface.png')
+    plt.savefig('Cp surface.png', dpi = 600)
     plt.show()
     plt.close()
     
@@ -185,7 +185,7 @@ def visualCt():
     plt.show()
     plt.close()
 
-visualCt()
+visualCp()
         
         
         
