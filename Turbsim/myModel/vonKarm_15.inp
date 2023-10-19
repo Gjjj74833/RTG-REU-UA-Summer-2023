@@ -2,8 +2,8 @@ TurbSim Input File. Valid for TurbSim v1.50, 25-Sep-2009. Input File for Certifi
 
 ---------Runtime Options-----------------------------------
 138925317 RandSeed1 - First random seed (-2147483648 to 2147483647)
--534532410 RandSeed2 - Second random seed (-2147483648 to 2147483647) for intrinsic pRNG, or an alternative pRNG: "RanLux" or "RNSNLW"
-False            WrBHHTP         - Output hub-height turbulence parameters in GenPro-binary form?  (Generates RootName.bin)
+-820052944 RandSeed2 - Second random seed (-2147483648 to 2147483647) for intrinsic pRNG, or an alternative pRNG: "RanLux" or "RNSNLW"
+-1180171690 WrBHHTP - Output hub-height turbulence parameters in GenPro-binary form? (Generates RootName.bin)
 False            WrFHHTP         - Output hub-height turbulence parameters in formatted form?  (Generates RootName.dat)
 True             WrADHH          - Output hub-height time-series data in AeroDyn form?  (Generates RootName.hh)
 False            WrADFF          - Output full-field time-series data in TurbSim/AeroDyn form? (Generates RootName.bts)
@@ -18,7 +18,7 @@ True             Clockwise       - Clockwise rotation looking downwind? (used on
 5                NumGrid_Z       - Vertical grid-point matrix dimension
 5                NumGrid_Y       - Horizontal grid-point matrix dimension
 0.01 TimeStep - Time step [seconds]
-600 AnalysisTime - Length of analysis time series [seconds] (program will add time if necessary: AnalysisTime = MAX(AnalysisTime, UsableTime+GridWidth/MeanHHWS) )
+0.01 AnalysisTime - Length of analysis time series [seconds] (program will add time if necessary: AnalysisTime = MAX(AnalysisTime, UsableTime+GridWidth/MeanHHWS) )
 600 UsableTime - Usable length of output time series [seconds] (program will add GridWidth/MeanHHWS seconds)
 90.00            HubHt           - Hub height [m] (should be > 0.5*GridHeight)
 162.00           GridHeight      - Grid height [m]
@@ -37,7 +37,7 @@ default          WindProfileType - Wind profile type ("JET"=Low-level jet,"LOG"=
 20 URef - Mean (total) wind speed at the reference height [m/s]
 default          ZJetMax         - Jet height [m] (used only for JET wind profile, valid 70-490 m)
 default          PLExp           - Power law exponent  (or "default")
-default          Z0              - Surface roughness length [m] (or "default")
+20 Z0 - Surface roughness length [m] (or "default")
 
 --------Non-IEC Meteorological Boundary Conditions------------
 default          Latitude        - Site latitude [degrees] (or "default")
