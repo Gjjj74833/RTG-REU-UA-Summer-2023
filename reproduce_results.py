@@ -9,10 +9,8 @@ import sys
 import numpy as np
 import subprocess
 import bisect
-from multiprocessing import Pool
-from datetime import datetime
-import random
-import os
+import matplotlib.pyplot as plt
+from scipy.signal import spectrogram
 
 
 def process_rotor_performance(input_file = "Cp_Ct.NREL5MW.txt"):
@@ -103,7 +101,7 @@ def CpCtCq(TSR, beta, performance):
     return C_p[TSR_index][pitch_index], C_t[TSR_index][pitch_index]
 
 
-def genWind(v_w, end_time, time_step):
+def genWind(v_w, end_time, time_step, seed):
     """
     Use Turbsim to generate a wind with turbulence.
 
@@ -125,9 +123,9 @@ def genWind(v_w, end_time, time_step):
     end_time += 1
         
     # Generate seeds for random wind model
-    seed1 = np.random.randint(-2147483648, 2147483648)
-    seed2 = np.random.randint(-2147483648, 2147483648)
-    seed = [seed1, seed2]
+    #seed1 = np.random.randint(-2147483648, 2147483648)
+    #seed2 = np.random.randint(-2147483648, 2147483648)
+    #seed = [seed1, seed2]
     path_inp = 'TurbSim_2/TurbSim.inp'
     
     
@@ -184,7 +182,7 @@ def genWind(v_w, end_time, time_step):
         horSpd.append(float(columns[1]))  
     
 
-    return np.array(horSpd), seed
+    return np.array(horSpd)
 
 
 def pierson_moskowitz_spectrum(U19_5, zeta, eta, t, random_phases):
@@ -248,6 +246,7 @@ def pierson_moskowitz_spectrum(U19_5, zeta, eta, t, random_phases):
     a_y = -np.sum((omega**2) * a * exp_component * sin_component)
 
     return wave_eta, [v_x, v_y, a_x, a_y]
+
 
 
 def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases):
@@ -610,7 +609,7 @@ def Betti(x, t, beta, T_E, Cp_type, performance, v_w, v_aveg, random_phases):
     return dxdt, Q_t
 
 
-def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind):
+def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, seed_wave):
     """
     Solve the system of ODEs dx/dt = Betti(x, t) using the fourth-order Runge-Kutta method.
 
@@ -657,8 +656,8 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind):
     
     # generate a random seed
     state_before = np.random.get_state()
-    wave_seed = np.random.randint(0, high=10**7)
-    np.random.seed(wave_seed)
+    #wave_seed = np.random.randint(0, high=10**7)
+    np.random.seed(seed_wave)
     random_phases = 2*np.pi*np.random.rand(400)
     np.random.set_state(state_before)
     ###########################################################################
@@ -761,10 +760,10 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind):
     betas_sub = betas[::steps][discard_steps:]
     Qt_list_sub = Qt_list[::steps][discard_steps:]
     
-    return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, betas_sub, wave_seed, Qt_list_sub
+    return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, betas_sub, Qt_list_sub
 
 
-def main(end_time, v_w, x0, time_step = 0.05, Cp_type = 0):
+def main(end_time, v_w, x0, seeds, seed_wave, time_step = 0.05, Cp_type = 0):
     """
     Cp computation method
 
@@ -793,64 +792,40 @@ def main(end_time, v_w, x0, time_step = 0.05, Cp_type = 0):
     
     # modify this to change initial condition
     #[zeta, v_zeta, eta, v_eta, alpha, omega, omega_R]
-    v_wind, seeds = genWind(v_w, end_time, time_step)
+    v_wind = genWind(v_w, end_time, time_step, seeds)
+    #v_wind = np.full(45000, 20)
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x, v_wind, wave_eta, betas, seed_wave, Q_t = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind)
-    seeds.append(seed_wave)
+    t, x, v_wind, wave_eta, betas, Q_t = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind, seed_wave)
+
     # return the output to be ploted
-    return t, x, v_wind, wave_eta, betas, seeds, Q_t
-    
-
-def run_simulation(params):
-    return main(*params)
+    return t, x, v_wind, wave_eta, betas, Q_t
 
 
-def run_simulations_parallel(n_simulations, params):
-    
-    state = np.array([-2.61426271, 
-                 -0.00299848190, 
-                 37.5499264, 
-                 -0.0558194064,
-                 0.00147344971, 
-                 -0.000391112846, 
-                 1.26855822])
+#min_occ Pitch Rate (deg/s): 2761 seeds: [-1891041594 -2125278397       56161]
+#max_value Heave (m): 1561 seeds: [ 337246529 2123554234    5514884]
 
-    params.append(state)
+#results 4
+#min_value Heave Velocity (m/s): 902 seeds: [ -121491204 -1304678860     6050178]
+#min_occ Surge (m): 254 seeds: [-1424433141  2045330612     7983119]
+#min_occ Rotor Speed (rpm): 450 seeds: [1365634968 1998175349    1373387]
+#min_occ Pitch Rate (deg/s): 1500 seeds: [ 1959064098 -1690322664     9494817]
+#max_value Surge Velocity (m/s): 1052 seeds: [  400672822 -1387694271      211887]
 
-    file_index = list(range(0, n_simulations))
-   
-    
-    with Pool(int(sys.argv[3])) as p:
-        
-        all_params = [params + [file_index[i]] for i in range(n_simulations)]
-        
-        results = p.map(run_simulation, all_params)
+#max_occ Pitch Rate (deg/s): 350 seeds: [631843952 414653701   3935394]
+#max_occ Pitch Angle (deg): 1450 seeds: [ 384934251 1838707713    9824874]
 
-    return results
-    
+#resultsw 3
+#max_value Pitch Rate (deg/s): 801 seeds: [-150537734  -78472730    1205302] run longer time
+
+v_w = 20
+end_time = 2000
+
+seeds_wind = [-1204, 60]
+seed_wave = 211887
 
 
-###############################################################################
-###############################################################################
-
-
-if __name__ == '__main__':
-
-    v_w = 20
-    end_time = int(sys.argv[4])
-    n_simulations = int(sys.argv[2])
-
-    params = [end_time, v_w]
-    
-    results = run_simulations_parallel(n_simulations, params)
-
-    save_binaryfile(results)
-
-'''
-x = genWind(20, 600, 0.05)
-#main(end_time, v_w, x0, time_step = 0.05, Cp_type = 0)
 x0 = np.array([-2.61426271, 
                  -0.00299848190, 
                  37.5499264, 
@@ -858,7 +833,201 @@ x0 = np.array([-2.61426271,
                  0.00147344971, 
                  -0.000391112846, 
                  1.26855822])
-main(600, 20, x0, time_step = 0.05, Cp_type = 0)
+t, x, v_wind, wave_eta, betas, Q_t = main(end_time, v_w, x0, seeds_wind, seed_wave)
+end_time -= 500
 
+np.savez('reproduced_results/data/results_max_value_Surge_Velocity.npz', t=t,  
+                                                x=x, 
+                                                v_wind=v_wind, 
+                                                wave_eta=wave_eta, 
+                                                betas=betas,  
+                                                Q_t=Q_t)
 '''
+
+#####################################################################################
+#####################################################################################
+
+data = np.load('reproduced_results/data/results_min_occ_pitch_rate.npz', allow_pickle=True)
+
+# Extracting the data
+t = data['t']  # Extracting time array
+x = data['x']  # Extracting x array
+v_wind = data['v_wind']  # Extracting wind velocity array
+wave_eta = data['wave_eta']  # Extracting wave eta array
+betas = data['betas']  # Extracting betas array
+Q_t = data['Q_t']  # Extracting Q_t array
+'''
+
+sample_rate = np.average(np.diff(t))  # average time interval
+sampling_freq = 1 / sample_rate  # frequency is the inverse of the time interval
+
+# Perform the Fourier Transform on your 'wave_eta' data
+yf = np.fft.fft(wave_eta)
+tf = np.fft.fftfreq(n=len(wave_eta), d=sample_rate)
+
+# As the fft results are symmetrical, we only need to take the first half
+# Also, it's common to take the absolute value because the FFT returns complex numbers.
+tf = tf[:len(tf)//2]
+yf = yf[:len(yf)//2]
+
+# Create a plot of the positive frequencies against the magnitudes
+plt.figure()
+plt.plot(tf, np.abs(yf))  # Magnitude spectrum
+plt.title('Fourier Transform of wave_eta')
+plt.xlabel('Frequency [Hz]')
+plt.ylabel('Magnitude')
+plt.grid()
+plt.show()
+
+
+
+state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
+               'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
+def plot_helper(ax):
+    
+    # plot wind
+    ax[0].plot(t, v_wind, color='black', linewidth=0.5)
+    ax[0].set_xlabel('Time (s)')
+    ax[0].set_title('Time evolution of Wind Speed (m/s)')
+    ax[0].set_ylabel('Wind speed (m/s)')
+    ax[0].grid(True)
+    ax[0].set_xlim(0, 1500)
+    #ax[0].set_xlim(0, t[-1])
+    
+    # plot wave
+    ax[1].plot(t, wave_eta, color='black', linewidth=0.5)
+    ax[1].set_xlabel('Time (s)')
+    ax[1].set_title('Time evolution of Wave Surface Elevation at x = 0 (m)')
+    ax[1].set_ylabel('Wave height (m)')
+    ax[1].grid(True)
+    #ax[1].set_xlim(0, t[-1])
+    ax[1].set_xlim(0, 1500)
+    
+    # plot 7 states
+    for j in range(7):
+        ax[j+2].plot(t, x[:, j], color='black', linewidth=0.5)
+        ax[j+2].set_xlabel('Time (s)')
+        ax[j+2].set_ylabel(f'{state_names[j]}')
+        
+        
+        
+        ax[j+2].set_title(f'Time evolution of {state_names[j]}')
+        ax[j+2].grid(True)
+        #ax[j+2].set_xlim(0, t[-1])
+        ax[j+2].set_xlim(0, 1500)
+        
+    ax[9].axis('off')
+    
+    
+
+fig_max_occ, ax_max_occ = plt.subplots(5, 2, figsize=(12, 17))
+fig_max_occ.suptitle('Extreme Trajectories and Percentile Plot', fontsize=16)
+ax_max_occ = ax_max_occ.flatten()
+
+plot_helper(ax_max_occ)
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) 
+plt.savefig('reproduced_results/figure/result2.png', dpi=600)
+plt.show()
+plt.close(fig_max_occ) 
+
+
+
+
+
+def plot_spectrogram(state, time_interval, state_name, destination_directory):
+    """
+    Plots a spectrogram highlighting the dominant frequency over time for a given state data.
+
+    Parameters
+    ----------
+    state : 1D array
+        The time-series data representing a specific state (e.g., surge, heave).
+    time_interval : 1D array
+        The time points corresponding to the data measurements.
+    state_name : str
+        A descriptive name for the state being analyzed (for labeling purposes).
+    destination_directory : str
+        Directory path where the plot will be saved.
+    """
+
+    # Compute the sampling frequency
+    sample_rate = 1 / np.average(np.diff(time_interval))
+
+    # Compute the spectrogram
+    f, t, Sxx = spectrogram(state, fs=sample_rate, nperseg=128, noverlap=120)
+
+    # Identify the peak frequency at each time point
+    dominant_frequencies = f[np.argmax(Sxx, axis=0)]
+
+    # Create a new figure for the plot
+    plt.figure()
+
+    # Plot the dominant frequency over time
+    plt.plot(t, dominant_frequencies, 'r', lw=1.5)  # 'r' specifies a red line
+    plt.title(f'Dominant Frequencies of {state_name}')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Frequency [Hz]')
+    #plt.ylim(0, 0.5)  # avoid showing 0 frequency
+    plt.grid(True)
+
+    # Save the figure in the provided directory path
+    #plt.savefig(f'{destination_directory}/dominant_spectrogram_{state_name}.png', dpi=300)
+
+    # Show the plot
+    plt.show()
+    
+    
+for i in range(7):
+    plot_spectrogram(x[:,i], t, state_name='wave_eta', destination_directory='')
+plot_spectrogram(wave_eta, t, state_name='wave_eta', destination_directory='')
+plot_spectrogram(v_wind, t, state_name='wave_eta', destination_directory='')
+
+
+def plot_dominant_spectrogram_with_amplitude(state, time_interval, state_name, destination_directory):
+    """
+    Plots a spectrogram that highlights the dominant frequencies and their amplitudes over time.
+
+    Parameters
+    ----------
+    state : 1D array
+        The time-series data representing a specific state (e.g., surge, heave).
+    time_interval : 1D array
+        The time points corresponding to the data measurements.
+    state_name : str
+        A descriptive name for the state being analyzed (for labeling purposes).
+    destination_directory : str
+        Directory path where the plot will be saved.
+    """
+
+    # Compute the sampling frequency
+    sample_rate = 1 / np.average(np.diff(time_interval))
+
+    # Compute the spectrogram
+    f, t, Sxx = spectrogram(state, fs=sample_rate, nperseg=256, noverlap=128)
+
+    # Find indices of the dominant frequency in each time slice
+    idx_dominant = np.argmax(Sxx, axis=0)
+
+    # Extract the amplitude and frequency values of the dominant frequencies
+    dominant_amplitudes = np.max(Sxx, axis=0)
+    dominant_frequencies = f[idx_dominant]
+
+    # Create a new figure for the plot
+    plt.figure()
+
+    # Create a scatter plot for dominant frequencies with the amplitude as the size
+    plt.scatter(t, dominant_frequencies, c='r', s=dominant_amplitudes * 100, alpha=0.6)  # 's' is size of the point
+    plt.title(f'Dominant Frequencies and Amplitudes of {state_name}')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Frequency [Hz]')
+    plt.ylim(0, 0.5)  # Avoid showing 0 frequency
+    plt.colorbar(label='Amplitude')
+    plt.grid(True)
+
+    # Save the figure in the provided directory path
+    #plt.savefig(f'{destination_directory}/dominant_spectrogram_amplitude_{state_name}.png', dpi=300)
+
+    # Show the plot
+    plt.show()
 

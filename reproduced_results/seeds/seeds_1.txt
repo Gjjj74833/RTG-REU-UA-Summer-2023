@@ -1,0 +1,138 @@
+this is results 1
+
+
+
+min_occ Surge (m): 354 seeds: [-1771513561   670730480     6703486]
+max_occ Surge (m): 104 seeds: [ 2048531459 -2115001289     9477378]
+min_value Surge (m): 1750 seeds: [-856074495  432459576    9289604]
+max_value Surge (m): 104 seeds: [ 2048531459 -2115001289     9477378]
+min_occ Surge Velocity (m/s): 752 seeds: [ 163203302 -812798221       4428]
+max_occ Surge Velocity (m/s): 752 seeds: [ 163203302 -812798221       4428]
+min_value Surge Velocity (m/s): 1704 seeds: [-1744883879   319884730     9289604]
+max_value Surge Velocity (m/s): 1750 seeds: [-856074495  432459576    9289604]
+min_occ Heave (m): 1154 seeds: [ 556981816 1146143197    4750142]
+max_occ Heave (m): 500 seeds: [1907119674 -423481290    9093276]
+min_value Heave (m): 601 seeds: [ 416290233 -458643487    5339310]
+max_value Heave (m): 601 seeds: [ 416290233 -458643487    5339310]
+min_occ Heave Velocity (m/s): 500 seeds: [1907119674 -423481290    9093276]
+max_occ Heave Velocity (m/s): 500 seeds: [1907119674 -423481290    9093276]
+min_value Heave Velocity (m/s): 601 seeds: [ 416290233 -458643487    5339310]
+max_value Heave Velocity (m/s): 601 seeds: [ 416290233 -458643487    5339310]
+min_occ Pitch Angle (deg): 703 seeds: [-1793101032  1508361815     4320852]
+max_occ Pitch Angle (deg): 703 seeds: [-1793101032  1508361815     4320852]
+min_value Pitch Angle (deg): 601 seeds: [ 416290233 -458643487    5339310]
+max_value Pitch Angle (deg): 703 seeds: [-1793101032  1508361815     4320852]
+min_occ Pitch Rate (deg/s): 703 seeds: [-1793101032  1508361815     4320852]
+max_occ Pitch Rate (deg/s): 703 seeds: [-1793101032  1508361815     4320852]
+min_value Pitch Rate (deg/s): 601 seeds: [ 416290233 -458643487    5339310]
+max_value Pitch Rate (deg/s): 601 seeds: [ 416290233 -458643487    5339310]
+min_occ Rotor Speed (rpm): 603 seeds: [1648937011 1892887397    4556945]
+max_occ Rotor Speed (rpm): 603 seeds: [1648937011 1892887397    4556945]
+min_value Rotor Speed (rpm): 603 seeds: [1648937011 1892887397    4556945]
+max_value Rotor Speed (rpm): 603 seeds: [1648937011 1892887397    4556945]
+
+
+this is results 2
+
+
+
+min_occ Surge (m): 201 seeds: [  783488375 -1160430346     1554349]
+max_occ Surge (m): 201 seeds: [  783488375 -1160430346     1554349]
+min_value Surge (m): 201 seeds: [  783488375 -1160430346     1554349]
+max_value Surge (m): 201 seeds: [  783488375 -1160430346     1554349]
+min_occ Surge Velocity (m/s): 1501 seeds: [1950475367  190352868    8289247]
+max_occ Surge Velocity (m/s): 1501 seeds: [1950475367  190352868    8289247]
+min_value Surge Velocity (m/s): 1154 seeds: [-2056281993  1247348841     3762205]
+max_value Surge Velocity (m/s): 1052 seeds: [ 159058000 1370406950    7017480]
+min_occ Heave (m): 753 seeds: [1005984867 -686930290    8815269]
+max_occ Heave (m): 52 seeds: [-1911314991  1446923341     6398573]
+min_value Heave (m): 1402 seeds: [ 241074579 2051774441    4922945]
+max_value Heave (m): 1353 seeds: [1948384108 -656727226    2671939]
+min_occ Heave Velocity (m/s): 753 seeds: [1005984867 -686930290    8815269]
+max_occ Heave Velocity (m/s): 753 seeds: [1005984867 -686930290    8815269]
+min_value Heave Velocity (m/s): 1402 seeds: [ 241074579 2051774441    4922945]
+max_value Heave Velocity (m/s): 1353 seeds: [1948384108 -656727226    2671939]
+min_occ Pitch Angle (deg): 904 seeds: [872180926 383871968   3218681]
+max_occ Pitch Angle (deg): 154 seeds: [-1726641590  1688144086     7888068]
+min_value Pitch Angle (deg): 854 seeds: [-464316375 2044166783    5397569]
+max_value Pitch Angle (deg): 1353 seeds: [1948384108 -656727226    2671939]
+min_occ Pitch Rate (deg/s): 1201 seeds: [ -118014334 -1217641822     4249078]
+max_occ Pitch Rate (deg/s): 154 seeds: [-1726641590  1688144086     7888068]
+min_value Pitch Rate (deg/s): 854 seeds: [-464316375 2044166783    5397569]
+max_value Pitch Rate (deg/s): 854 seeds: [-464316375 2044166783    5397569]
+min_occ Rotor Speed (rpm): 201 seeds: [  783488375 -1160430346     1554349]
+max_occ Rotor Speed (rpm): 201 seeds: [  783488375 -1160430346     1554349]
+min_value Rotor Speed (rpm): 201 seeds: [  783488375 -1160430346     1554349]
+max_value Rotor Speed (rpm): 201 seeds: [  783488375 -1160430346     1554349]
+Detailed performance metrics for this job will be available at https://metrics.hpc.arizona.edu/#job_viewer?action=show&realm=SUPREMM&resource_id=4&local_job_id=1658007 by 8am on 2023/10/24.
+
+
+this is results 3
+
+
+
+min_occ Surge (m): 1052 seeds: [-1358697713  -462122494     2664078]
+max_occ Surge (m): 800 seeds: [ -3596623 329850306    457210]
+min_value Surge (m): 1052 seeds: [-1358697713  -462122494     2664078]
+max_value Surge (m): 1950 seeds: [-1157564949  -106423575     3191214]
+min_occ Surge Velocity (m/s): 953 seeds: [ 2062356962 -1973551217     5834995]
+max_occ Surge Velocity (m/s): 1801 seeds: [ 1059204205 -1724548423     7632959]
+min_value Surge Velocity (m/s): 904 seeds: [1624201905  624572850    6723837]
+max_value Surge Velocity (m/s): 904 seeds: [1624201905  624572850    6723837]
+min_occ Heave (m): 1304 seeds: [1844307704 1874660198    9586133]
+max_occ Heave (m): 1304 seeds: [1844307704 1874660198    9586133]
+min_value Heave (m): 801 seeds: [-150537734  -78472730    1205302]
+max_value Heave (m): 801 seeds: [-150537734  -78472730    1205302]
+min_occ Heave Velocity (m/s): 1304 seeds: [1844307704 1874660198    9586133]
+max_occ Heave Velocity (m/s): 1304 seeds: [1844307704 1874660198    9586133]
+min_value Heave Velocity (m/s): 801 seeds: [-150537734  -78472730    1205302]
+max_value Heave Velocity (m/s): 801 seeds: [-150537734  -78472730    1205302]
+min_occ Pitch Angle (deg): 954 seeds: [-514258701 1239123680     593742]
+max_occ Pitch Angle (deg): 1300 seeds: [-1741971552   560505679     9527729]
+min_value Pitch Angle (deg): 801 seeds: [-150537734  -78472730    1205302]
+max_value Pitch Angle (deg): 504 seeds: [-204826374 -966509130    5148706]
+min_occ Pitch Rate (deg/s): 1300 seeds: [-1741971552   560505679     9527729]
+max_occ Pitch Rate (deg/s): 1300 seeds: [-1741971552   560505679     9527729]
+min_value Pitch Rate (deg/s): 452 seeds: [ 1351979082 -1358014331     4080615]
+max_value Pitch Rate (deg/s): 801 seeds: [-150537734  -78472730    1205302]
+min_occ Rotor Speed (rpm): 1301 seeds: [ 1687249329 -2139851065     2152827]
+max_occ Rotor Speed (rpm): 1500 seeds: [-866886337  450543286    1077616]
+min_value Rotor Speed (rpm): 1500 seeds: [-866886337  450543286    1077616]
+max_value Rotor Speed (rpm): 402 seeds: [662560569 149938309   3721651]
+Detailed performance metrics for this job will be available at https://metrics.hpc.arizona.edu/#job_viewer?action=show&realm=SUPREMM&resource_id=4&local_job_id=1658008 by 8am on 2023/10/24.
+
+
+
+this is results 4
+
+
+
+min_occ Surge (m): 254 seeds: [-1424433141  2045330612     7983119]
+max_occ Surge (m): 1652 seeds: [2064209587 1013111744    2930036]
+min_value Surge (m): 1652 seeds: [2064209587 1013111744    2930036]
+max_value Surge (m): 600 seeds: [329112590 615878282   6008020]
+min_occ Surge Velocity (m/s): 1701 seeds: [-366946144 1490603143     459974]
+max_occ Surge Velocity (m/s): 353 seeds: [1737185251  844880342    2024372]
+min_value Surge Velocity (m/s): 1250 seeds: [1662046271 -607007971    2361789]
+max_value Surge Velocity (m/s): 1052 seeds: [  400672822 -1387694271      211887]
+min_occ Heave (m): 1153 seeds: [-1747130953 -1829122351     8643381]
+max_occ Heave (m): 1303 seeds: [ 251694242 1657793525    7478471]
+min_value Heave (m): 1251 seeds: [-2065000450  -551286339     3804662]
+max_value Heave (m): 1251 seeds: [-2065000450  -551286339     3804662]
+min_occ Heave Velocity (m/s): 1752 seeds: [-1205731038 -1419321941     1337659]
+max_occ Heave Velocity (m/s): 954 seeds: [-1898083592   626138660     9141400]
+min_value Heave Velocity (m/s): 902 seeds: [ -121491204 -1304678860     6050178]
+max_value Heave Velocity (m/s): 1251 seeds: [-2065000450  -551286339     3804662]
+min_occ Pitch Angle (deg): 1500 seeds: [ 1959064098 -1690322664     9494817]
+max_occ Pitch Angle (deg): 1450 seeds: [ 384934251 1838707713    9824874]
+min_value Pitch Angle (deg): 1554 seeds: [1820087526   32059213    1259850]
+max_value Pitch Angle (deg): 1554 seeds: [1820087526   32059213    1259850]
+min_occ Pitch Rate (deg/s): 1500 seeds: [ 1959064098 -1690322664     9494817]
+max_occ Pitch Rate (deg/s): 350 seeds: [631843952 414653701   3935394]
+min_value Pitch Rate (deg/s): 1554 seeds: [1820087526   32059213    1259850]
+max_value Pitch Rate (deg/s): 1554 seeds: [1820087526   32059213    1259850]
+min_occ Rotor Speed (rpm): 450 seeds: [1365634968 1998175349    1373387]
+max_occ Rotor Speed (rpm): 754 seeds: [1421099783 1594626575    6788086]
+min_value Rotor Speed (rpm): 754 seeds: [1421099783 1594626575    6788086]
+max_value Rotor Speed (rpm): 1602 seeds: [-1934189788  -600467968      899717]
+Detailed performance metrics for this job will be available at https://metrics.hpc.arizona.edu/#job_viewer?action=show&realm=SUPREMM&resource_id=4&local_job_id=1658009 by 8am on 2023/10/24.
