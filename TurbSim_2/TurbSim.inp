@@ -2,8 +2,8 @@
 for Certification Test #5 (SMOOTH Spectrum, formatted FF files, Coherent Structures).
 ---------Runtime Options-----------------------------------
 False         Echo            - Echo input data to <RootName>.ech (flag)
--1204 RandSeed1 - First random seed (-2147483648 to 2147483647)
-60 RandSeed2 - Second random seed (-2147483648 to 2147483647) for intrinsic pRNG, or an alternative pRNG: "RanLux" or "RNSNLW"
+1879 RandSeed1 - First random seed (-2147483648 to 2147483647)
+-386547 RandSeed2 - Second random seed (-2147483648 to 2147483647) for intrinsic pRNG, or an alternative pRNG: "RanLux" or "RNSNLW"
 False         WrBHHTP         - Output hub-height turbulence parameters in binary form?  (Generates RootName.bin)
 False         WrFHHTP         - Output hub-height turbulence parameters in formatted form?  (Generates RootName.dat)
 True         WrADHH          - Output hub-height time-series data in AeroDyn form?  (Generates RootName.hh)
