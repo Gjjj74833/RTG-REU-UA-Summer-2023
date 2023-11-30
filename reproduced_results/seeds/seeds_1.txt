@@ -208,3 +208,12 @@ FIG.19
 max_value Heave Velocity (m/s): 368 seeds: [-2345591 -7934559  9597827]
 FIG. 20
 max_occ Pitch Acceleration (deg/s^2): 438 seeds: [ 966870 8017384 8986784]
+
+surge
+max_occ Surge (m): 439 seeds: [-4966241  2503014  9071735]
+surge Velocity
+max_occ Surge Velocity (m/s): 875 seeds: [-3919707  4205247   211083]
+short corr wave
+max_value Heave (m): 5739 seeds: [-2375012  1896513   697920]
+long corr wave
+max_occ Surge Velocity (m/s): 763 seeds: [ 4791833 -6871233  7883251]

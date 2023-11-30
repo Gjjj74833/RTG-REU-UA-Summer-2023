@@ -9,9 +9,11 @@ import sys
 import numpy as np
 import subprocess
 import bisect
-import matplotlib.pyplot as plt
-from scipy.signal import spectrogram
-from matplotlib.lines import Line2D
+from multiprocessing import Pool
+from datetime import datetime
+import random
+import os
+
 
 def process_rotor_performance(input_file = "Cp_Ct.NREL5MW.txt"):
     """
@@ -101,7 +103,7 @@ def CpCtCq(TSR, beta, performance):
     return C_p[TSR_index][pitch_index], C_t[TSR_index][pitch_index]
 
 
-def genWind(v_w, end_time, time_step, seed):
+def genWind(v_w, end_time, time_step):
     """
     Use Turbsim to generate a wind with turbulence.
 
@@ -123,9 +125,9 @@ def genWind(v_w, end_time, time_step, seed):
     end_time += 1
         
     # Generate seeds for random wind model
-    #seed1 = np.random.randint(-2147483648, 2147483648)
-    #seed2 = np.random.randint(-2147483648, 2147483648)
-    #seed = [seed1, seed2]
+    seed1 = np.random.randint(-2147483648, 2147483648)
+    seed2 = np.random.randint(-2147483648, 2147483648)
+    seed = [seed1, seed2]
     path_inp = 'TurbSim_2/TurbSim.inp'
     
     
@@ -182,25 +184,7 @@ def genWind(v_w, end_time, time_step, seed):
         horSpd.append(float(columns[1]))  
     
 
-    return np.array(horSpd)
-
-def genWind_seeds(seeds):
-    path_hh = f'reproduced_results/turbsim_output/{seeds[0]}_{seeds[1]}.hh'
-
-    with open(path_hh, 'r') as file:
-        lines = file.readlines()
-    
-    # Skip the header
-    data = lines[8:]
-    
-    horSpd = []
-
-    for line in data:
-        columns = line.split()
-        horSpd.append(float(columns[1]))  
-    
-
-    return np.array(horSpd)
+    return np.array(horSpd), seed
 
 
 def pierson_moskowitz_spectrum(U19_5, zeta, eta, t, random_phases):
@@ -264,7 +248,6 @@ def pierson_moskowitz_spectrum(U19_5, zeta, eta, t, random_phases):
     a_y = -np.sum((omega**2) * a * exp_component * sin_component)
 
     return wave_eta, [v_x, v_y, a_x, a_y]
-    #return 0, [0,0,0,0]
 
 
 def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases):
@@ -536,8 +519,7 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_p
     
     avegQ_t = np.sqrt(Qt_zeta**2+Qt_eta**2)/8
 
-    return np.linalg.inv(E) @ F, v_in, Cp, h_wave, avegQ_t
-
+    return np.linalg.inv(E) @ F, v_in, Cp, avegQ_t
 
 
 def WindTurbine(omega_R, v_in, beta, T_E, t, Cp):
@@ -621,14 +603,14 @@ def Betti(x, t, beta, T_E, Cp_type, performance, v_w, v_aveg, random_phases):
     x1 = x[:6]
     omega_R = x[6]
     
-    dx1dt, v_in, Cp, h_wave, Q_t = structure(x1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases)
+    dx1dt, v_in, Cp, Q_t = structure(x1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases)
     dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t, Cp)
     dxdt = np.append(dx1dt, dx2dt)
     
-    return dxdt, h_wave, Q_t
+    return dxdt, Q_t
 
 
-def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, seed_wave):
+def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind):
     """
     Solve the system of ODEs dx/dt = Betti(x, t) using the fourth-order Runge-Kutta method.
 
@@ -675,8 +657,8 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     
     # generate a random seed
     state_before = np.random.get_state()
-    #wave_seed = np.random.randint(0, high=10**7)
-    np.random.seed(seed_wave)
+    wave_seed = np.random.randint(0, high=10**7)
+    np.random.seed(wave_seed)
     random_phases = 2*np.pi*np.random.rand(400)
     np.random.set_state(state_before)
     ###########################################################################
@@ -735,10 +717,10 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     error = np.empty(n)
     
     betas = []
-    h_waves = []
+
     for i in range(n - 1):
         betas.append(beta)
-        k1, h_wave, Q_t = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)
+        k1, Q_t = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)
         k2 = Betti(x[i] + 0.5 * dt * k1, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)[0]
         k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)[0]
         k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)[0]
@@ -747,7 +729,6 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
         beta, integral, error = PI_blade_pitch_controller(x[i][6], dt, beta, integral, error, i)
         
         Qt_list.append(Q_t)
-        h_waves.append(h_wave)
         
     last_Qt = Betti(x[-1], t[-1], beta, T_E, Cp_type, performance, v_wind[-1], v_w, random_phases)[1]
     Qt_list.append(last_Qt)
@@ -766,29 +747,24 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     # Output wave elevation at zeta = 0
     wave_eta = []
     for i in t:
-        wave_eta.append(pierson_moskowitz_spectrum(v_w, -2.61426271, 0, i, random_phases)[0])
+        wave_eta.append(pierson_moskowitz_spectrum(v_w, 0, 0, i, random_phases)[0])
         
     steps = int(0.5 / dt)
     # dicard data for first 500s
     discard_steps = int(500 / 0.5)
     
-    np.savez(f'reproduced_results/data/{seeds[0]}_{seeds[1]}_{seeds[2]}_wind_wave_time.npz', 
-                                                    t=t,  
-                                                    v_wind=v_wind, 
-                                                    wave_eta=wave_eta)    
 
     t_sub = t[::steps][discard_steps:]
     x_sub = x[::steps][discard_steps:]
     v_wind_sub = v_wind[:len(t)][::steps][discard_steps:]
     wave_eta_sub = np.array(wave_eta)[::steps][discard_steps:]
-    h_wave_sub = np.array(h_waves)[::steps][discard_steps:]
     betas_sub = betas[::steps][discard_steps:]
     Qt_list_sub = Qt_list[::steps][discard_steps:]
     
-    return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, h_wave_sub, betas_sub, Qt_list_sub
+    return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, betas_sub, wave_seed, Qt_list_sub
 
 
-def main(end_time, v_w, x0, seeds, seed_wave, time_step = 0.05, Cp_type = 0):
+def main(end_time, v_w, x0, time_step = 0.05, Cp_type = 0):
     """
     Cp computation method
 
@@ -817,289 +793,72 @@ def main(end_time, v_w, x0, seeds, seed_wave, time_step = 0.05, Cp_type = 0):
     
     # modify this to change initial condition
     #[zeta, v_zeta, eta, v_eta, alpha, omega, omega_R]
-    #v_wind = genWind(v_w, end_time, time_step, seeds)
-    v_wind = np.load(f'reproduced_results/turbsim_output/{seeds[0]}_{seeds[1]}.npy')
-    #v_wind = genWind_seeds(seeds)
-    #v_wind = np.full(45000, 20)
+    v_wind, seeds = genWind(v_w, end_time, time_step)
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x, v_wind, wave_eta, h_wave, betas, Q_t = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind, seed_wave)
-
+    t, x, v_wind, wave_eta, betas, seed_wave, Q_t = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind)
+    seeds.append(seed_wave)
     # return the output to be ploted
-    return t, x, v_wind, wave_eta, h_wave, betas, Q_t
-
-
-#min_occ Pitch Rate (deg/s): 2761 seeds: [-1891041594 -2125278397       56161]
-#max_value Heave (m): 1561 seeds: [ 337246529 2123554234    5514884]
-
-
-
-#Type 1: Large wave but stable states
-    #results 1:
-    #max_occ Surge Velocity (m/s): 752 seeds: [ 163203302 -812798221       4428]
-    #max_value Rotor Speed (rpm): 603 seeds: [1648937011 1892887397    4556945]\
-    #max_value Surge Velocity (m/s): 1750 seeds: [-856074495  432459576    9289604]
-    #min_value Surge Velocity (m/s): 1154 seeds: [-2056281993  1247348841     3762205]
-    #results 2:
-    #max_value Surge Velocity (m/s): 1052 seeds: [ 159058000 1370406950    7017480]
-    #results 4:
-    #max_value Surge Velocity (m/s): 1052 seeds: [  400672822 -1387694271      211887]
-
-#Type 2: Large amplitude in heave/pitch caused by large wave but back to normal quickly
-    #results 1:
-    #max_value Heave (m): 601 seeds: [ 416290233 -458643487    5339310]
-    #results 2:
-    #max_value Heave Velocity (m/s): 1353 seeds: [1948384108 -656727226    2671939] run more time
-    #max_value Pitch Rate (deg/s): 854 seeds: [-464316375 2044166783    5397569]
-
-#Type 3: relative large amplitute (with long time correlation) but no significant wave/ wind
-    #results 1:
-    #min_value Surge Velocity (m/s): 1154 seeds: [-2056281993  1247348841     3762205]
-    #results 2:
-    #min_occ Pitch Rate (deg/s): 1201 seeds: [ -118014334 -1217641822     4249078]
-    #min_occ Heave Velocity (m/s): 753 seeds: [1005984867 -686930290    8815269]
-    #max_value Heave Velocity (m/s): 1353 seeds: [1948384108 -656727226    2671939] run more time
-    #max_occ Pitch Angle (deg): 154 seeds: [-1726641590  1688144086     7888068]
-    #results 3:
-    #max_value Pitch Rate (deg/s): 801 seeds: [-150537734  -78472730    1205302] run longer time
-    #max_occ Pitch Rate (deg/s): 1300 seeds: [-1741971552   560505679     9527729]
-    #min_occ Pitch Angle (deg): 954 seeds: [-514258701 1239123680     593742]
-    #min_occ Surge Velocity (m/s): 953 seeds: [ 2062356962 -1973551217     5834995]
-    #min_value Pitch Rate (deg/s): 452 seeds: [ 1351979082 -1358014331     4080615] run perious time
-    #results 4:
-    #min_value Heave Velocity (m/s): 902 seeds: [ -121491204 -1304678860     6050178]
-    #min_occ Surge (m): 254 seeds: [-1424433141  2045330612     7983119]
-    #***min_occ Rotor Speed (rpm): 450 seeds: [1365634968 1998175349    1373387]
-    #min_occ Pitch Rate (deg/s): 1500 seeds: [ 1959064098 -1690322664     9494817]
-    #max_occ Pitch Rate (deg/s): 350 seeds: [631843952 414653701   3935394] run preivous time
-    #max_occ Pitch Angle (deg): 1450 seeds: [ 384934251 1838707713    9824874]
+    return t, x, v_wind, wave_eta, betas, seeds, Q_t
     
-    
-def reproduce_save_driver(seeds):
 
+def run_simulation(params):
+    return main(*params)
+
+
+def run_simulations_parallel(n_simulations, params):
+    
+    state = np.array([-2.61426271, 
+                 -0.00299848190, 
+                 37.5499264, 
+                 -0.0558194064,
+                 0.00147344971, 
+                 -0.000391112846, 
+                 1.26855822])
+
+    params.append(state)
+
+    file_index = list(range(0, n_simulations))
+   
+    
+    with Pool(int(sys.argv[3])) as p:
+        
+        all_params = [params + [file_index[i]] for i in range(n_simulations)]
+        
+        results = p.map(run_simulation, all_params)
+
+    return results
+    
+
+
+###############################################################################
+###############################################################################
+
+
+if __name__ == '__main__':
 
     v_w = 20
-    end_time = 2000 #end_time < 3000
-    
-    seeds_wind = [seeds[0], seeds[1]]
-    seed_wave = seeds[2]
-    
-    
-    x0 = np.array([-2.61426271, 
-                     -0.00299848190, 
-                     37.5499264, 
-                     -0.0558194064,
-                     0.00147344971, 
-                     -0.000391112846, 
-                     1.26855822])
-    t, x, v_wind, wave_eta, h_wave, betas, Q_t = main(end_time, v_w, x0, seeds_wind, seed_wave)
-    end_time -= 500
-    
-    np.savez(f'reproduced_results/data/{seeds[0]}_{seeds[1]}_{seeds[2]}.npz', 
-                                                    t=t,  
-                                                    x=x, 
-                                                    v_wind=v_wind, 
-                                                    wave_eta=wave_eta, 
-                                                    betas=betas,
-                                                    h_wave=h_wave,
-                                                    Q_t=Q_t)
-    
+    end_time = int(sys.argv[4])
+    n_simulations = int(sys.argv[2])
 
-#####################################################################################
-#####################################################################################
+    params = [end_time, v_w]
+    
+    results = run_simulations_parallel(n_simulations, params)
 
-def load_data(seeds):
-    '''
-    load the simulation results data
-    load the pitch acceleration
-    load the percentile and extreme value
-    '''
-    
-    output_file_name = f'{seeds[0]}_{seeds[1]}_{seeds[2]}.npz'
-
-    data = np.load(f'reproduced_results/data/{output_file_name}', allow_pickle=True)
-    
-    # Extracting the data
-    t = data['t'][:-1]
-    x = data['x'][:-1]
-    wind_speed = data['v_wind'][:-1]
-    wave_eta = data['wave_eta'][:-1]
-    data.close()
-    
-    pitch_rate = x[:, 5]  
-    pitch_acceleration = np.diff(pitch_rate)
-    last_acceleration = pitch_acceleration[-1][None]
-    pitch_acceleration = np.concatenate((pitch_acceleration, last_acceleration), axis=0)[:, None] 
-    state = np.concatenate((x[:, :6], pitch_acceleration), axis=1)
-    
-                        
-                           
-    # Extracting percentile data
-    percentile_file_path = 'reproduced_results/percentile_extreme.npz'
-    data = np.load(percentile_file_path)
-
-    percentile_87_5 = data['percentile_87_5'][:-1]
-    percentile_12_5 = data['percentile_12_5'][:-1]
-
-    percentile_62_5 = data['percentile_62_5'][:-1]
-    percentile_37_5 = data['percentile_37_5'][:-1]
-
-    percentile_50 = data['percentile_50'][:-1]
-
-    max_state = data['max_state'][:-1]
-    min_state = data['min_state'][:-1]
-    data.close()
-    figure_directory = 'reproduced_results/figure'
-    
-    ######################################################################
-    state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
-                   'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Pitch Acceleration (deg/s^2)', 'Rotor Speed (rpm)']
-
-
-    
-    data.close()
-
-
-    
-    def plot_helper(ax):
-        
-        # plot wind
-        ax[0].plot(t, wind_speed, color='black', linewidth=0.5)
-        ax[0].set_xlabel('Time (s)')
-        ax[0].set_title('Time evolution of Wind Speed (m/s)', fontsize=15)
-        ax[0].set_ylabel('Wind speed (m/s)')
-        ax[0].grid(True)
-        ax[0].set_xlim(0, t[-1])
-        
-        # plot wave
-        ax[1].plot(t, wave_eta, color='black', linewidth=0.5)
-        ax[1].set_xlabel('Time (s)')
-        ax[1].set_title('Wave Elevation', fontsize=15)
-        ax[1].set_ylabel('Wave height (m)')
-        ax[1].grid(True)
-        ax[1].set_xlim(0, t[-1])
-        
-        # plot 7 states
-        for j in range(7):
-            ax[j+2].plot(t, max_state[:,j], alpha=0.6, color='green', linewidth=0.5)
-            ax[j+2].plot(t, min_state[:,j], alpha=0.6, color='orange', linewidth=0.5)
-
-            ax[j+2].plot(t, state[:, j], color='black', linewidth=0.5)
-            ax[j+2].set_xlabel('Time (s)')
-            ax[j+2].set_ylabel(f'{state_names[j]}')
-            
-            ax[j+2].fill_between(t, percentile_12_5[:, j], percentile_87_5[:, j], color='b', alpha=0.3, edgecolor='none')
-            ax[j+2].fill_between(t, percentile_37_5[:, j], percentile_62_5[:, j], color='b', alpha=0.3, edgecolor='none')
-            ax[j+2].plot(t, percentile_50[:, j], color='r', alpha=0.9, linewidth=0.5)
-            
-            ax[j+2].set_title(f'Time evolution of {state_names[j]}', fontsize=15)
-            ax[j+2].grid(True)
-            ax[j+2].set_xlim(0, t[-1])
-            
-        ax[9].axis('off')
-        
-        legend_elements = [Line2D([0], [0], color='black', lw=1, alpha=1, label='One Simulation Results With Extreme Events'),
-                           Line2D([0], [0], color='r', lw=1, alpha=0.9, label='Median Cross All Simulations'),
-                           Line2D([0], [0], color='b', lw=8, alpha=0.6, label='Central 25th Percentile of Data'),
-                           Line2D([0], [0], color='b', lw=8, alpha=0.3, label='Central 75th Percentile of Data'),
-                           Line2D([0], [0], color='green', lw=1, alpha=0.6, label='The Max Value Cross All Simulations at Each Time Step'),
-                           Line2D([0], [0], color='orange', lw=1, alpha=0.6, label='The Min Value Cross All Simulations at Each Time Step')]
-        
-        ax[9].legend(handles=legend_elements, loc='center', fontsize=12)
-      
-    
-    # for 8 states including pitch acceleration:
-
-    # create subplots for each simulation index in max_occ_sim
-    fig_max_occ, ax_max_occ = plt.subplots(5, 2, figsize=(12, 16))
-    ax_max_occ = ax_max_occ.flatten()
-    
-    plot_helper(ax_max_occ)
-    
-    plt.tight_layout() 
-    plt.savefig(f'./{figure_directory}/large_long_coor_wave.png')
-    plt.show()
-    plt.close(fig_max_occ) 
-        
-        
-def fft_wave(wave_eta, t):
-    fft_result = np.fft.fft(wave_eta)
-    
-    # Calculate the amplitude spectrum
-    amplitude_spectrum = np.abs(fft_result)
-    
-    # Create the corresponding frequency values for the x-axis
-    frequencies = np.fft.fftfreq(len(wave_eta), t[1] - t[0])
-    
-    
-    max_amplitude = np.max(amplitude_spectrum)
-    normalized_amplitude_spectrum = amplitude_spectrum / max_amplitude
-    
-    return frequencies, normalized_amplitude_spectrum
-    
-    
-
-
-def plot_fft(wave_eta, t):
-    
-    #FIG18
-    #wave_eta_stable = wave_eta[10000:24000]
-    #wave_eta_unstable = wave_eta[26000:]
-    #frequencies, amplitude = fft_wave(wave_eta, t)
-    #FIG19
-    #wave_eta_stable = wave_eta[28000:]
-    #wave_eta_unstable = wave_eta[16000:24000]
-    #FIG20
-    wave_eta_stable = wave_eta[18000:28000]
-    wave_eta_unstable = wave_eta[32000:36000]
-    frequencies, amplitude = fft_wave(wave_eta, t)
-    frequencies_stable, amplitude_stable = fft_wave(wave_eta_stable, t)
-    frequencies_unstable, amplitude_unstable = fft_wave(wave_eta_unstable, t)
-    
-    plt.figure()
-    #plt.plot(frequencies, amplitude, color='black', linewidth=0.7, label='All time interval')
-    plt.plot(frequencies_stable, amplitude_stable, color='r', linewidth=0.7, label='400 - 900 seconds')
-    plt.plot(frequencies_unstable, amplitude_unstable, color='b', linewidth=0.7, label='1100 - 1300 seconds')
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Amplitude scalar')
-    plt.grid(True)
-    plt.xlim(0.001, 0.2)
-    plt.ylim(0, 0.045)
-    plt.title('Amplitude Spectrum (FFT) of Wind Signals')
-    plt.legend()
-    plt.savefig('reproduced_results/figure/wind_FIG20_fft.png', dpi=200)
-    plt.show()
-
-    
-    
-#FIG18
-#seeds = [ -1208458,  3909624,  5622256]
-#FIG19
-#seeds = [-2345591, -7934559,  9597827]
-#FIG205
-#seeds = [966870, 8017384, 8986726534484]
-#surge events
-#seeds = [-4966241,  2503014,  9071735]
-#surge velocity
-#seeds = [-3919707,  4205247,   211083]
-#wave short corr
-#seeds = [-2375012,  1896513,   697920]
-#wave long corr
-seeds = [4791833, -6871233,  7883251]
-
-#reproduce_save_driver(seeds)
-
-
-
-load_data(seeds)
+    save_binaryfile(results)
 
 '''
-input_data = np.load(f'reproduced_results/data/{seeds[0]}_{seeds[1]}_{seeds[2]}_wind_wave_time.npz', allow_pickle=True)
-v_wind = input_data['v_wind']
-wave_eta = input_data['wave_eta']
-t = input_data['t']
-
-#plot_fft(v_wind, t)
+x = genWind(20, 600, 0.05)
+#main(end_time, v_w, x0, time_step = 0.05, Cp_type = 0)
+x0 = np.array([-2.61426271, 
+                 -0.00299848190, 
+                 37.5499264, 
+                 -0.0558194064,
+                 0.00147344971, 
+                 -0.000391112846, 
+                 1.26855822])
+main(600, 20, x0, time_step = 0.05, Cp_type = 0)
 
 '''
+
