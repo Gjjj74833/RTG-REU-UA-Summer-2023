@@ -8,10 +8,10 @@ Write the power coefficient file
 
 import numpy as np
 import matplotlib.pyplot as plt
-from Betti import drvCpCtCq
+from Betti import CpCtCq
 from Betti import process_rotor_performance
 
-            
+'''      
 def write(pitch_step = 0.1, omega_step = 0.01, v_w = 10):
     """
     Write the power coefficient and thrust coefficient file
@@ -98,7 +98,7 @@ def write(pitch_step = 0.1, omega_step = 0.01, v_w = 10):
         file.write("#  Thrust coefficient \n")
         file.write(" \n")
         file.write(Ct_str)
-
+'''
             
 def visualCp():
     """
@@ -132,7 +132,7 @@ def visualCp():
     plt.title('Power Coefficient Surface')
     plt.xlim(-5, 30)
     plt.ylim(0, 18)
-    plt.savefig('Cp surface.png', dpi = 600)
+    #plt.savefig('Cp surface.png', dpi = 600)
     plt.show()
     plt.close()
     
@@ -168,27 +168,45 @@ def visualCt():
     pitch, TSR = np.meshgrid(pitch_list, TSR_list)
     
     plt.figure()
+
     c = plt.pcolormesh(pitch, TSR, C_t, cmap='viridis')  # using viridis colormap
     plt.colorbar(c, label='Cp value')
 
     contour_lines = plt.contour(pitch, TSR, C_t, colors='black')
     #plt.clabel(contour_lines, inline=True, fontsize=8)
     #plt.clabel(contour_lines, inline=True, fontsize=8, fmt='%1.2f')
-
-
+    
+    label_pitch = 17.47  
+    label_wind_speed = 20   
+    label_TSR = 1.2671*63/label_wind_speed
+    Ct = CpCtCq(label_TSR, np.deg2rad(label_pitch), performance)[1]
+    
+    plt.plot(label_pitch, label_wind_speed, 'ro')  
+    plt.text(label_pitch - 2, label_wind_speed + 1, f'{Ct:.4f}', color='red', fontsize=12)
+    
+    
+    label_pitch = 0  
+    label_wind_speed = 11   
+    label_TSR = 1.2671*63/label_wind_speed
+    Ct = CpCtCq(label_TSR, np.deg2rad(label_pitch), performance)[1]
+    
+    plt.plot(label_pitch, label_wind_speed, 'ro')  
+    plt.text(label_pitch - 1, label_wind_speed + 1, f'{Ct:.4f}', color='red', fontsize=12)
+    
     plt.xlabel('Blade Pitch angle (deg)')
     plt.ylabel('Wind Speed (m/s)')
     plt.title('Thrust Coefficient Surface at Rotor Speed 12 rpm')
-    plt.xlim(0, 20)
+    plt.xlim(-5, 30)
     plt.ylim(5, 25)  # Changing the y-limit to match your TSR range
-    plt.savefig('Ct surface.png', dpi=2000)
+    plt.savefig('Ct surface.png')
+    
     plt.show()
     plt.close()
 
-visualCp()
+
         
         
-        
+visualCt()
         
         
         

@@ -169,7 +169,7 @@ def drvCpCtCq(omega_R, v_in, beta):
 
 
 
-def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w = 20):
+def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w = 11):
     """
     The structure of the Betti model
 
@@ -604,7 +604,7 @@ def rk4(Betti, x0, t0, tf, dt, beta, T_E, Cp_type, performance):
 
 
 
-def main(end_time, time_step = 0.01, Cp_type = 0):
+def main(end_time, time_step = 0.05, Cp_type = 0):
     """
     Cp computation method
 
@@ -638,36 +638,42 @@ def main(end_time, time_step = 0.01, Cp_type = 0):
     
     # modify this to change initial condition
     #[zeta, v_zeta, eta, v_eta, alpha, omega, omega_R]
-    x0 = np.array([0, 1, 30.55, -5, 0, 0, 1])
+    x0 = np.array([0,#-2.09881, 
+                    -0.00299848190, 
+                    34.5499264, 
+                    -0.0558194064,
+                    0.00147344971, 
+                    -0.000391112846, 
+                    1.2671])
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    #t, x = rk4(Betti, x0, start_time, end_time, time_step, 0.31, 43093.55, Cp_type, performance)
-    t, x = rk4(Betti, x0, start_time, end_time, time_step, 0, 40000, Cp_type, performance)
-    
+    #t, x = rk4(Betti, x0, start_time, end_time, time_step, 0.30490902, 43093.55, Cp_type, performance)
+    t, x = rk4(Betti, x0, start_time, end_time, time_step, 0, 40400, Cp_type, performance)
 
     
     state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
                    'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor speed (rpm)']
     
-    
+    '''
     for i in range(x.shape[1]):
         plt.figure(figsize=(6.4, 2.4))  # create a new figure for each state
         plt.plot(t, x[:, i])
         plt.xlabel('Time')
         plt.ylabel(f'{state_names[i]}')
-        plt.title(f'Time evolution of {state_names[i]}')
+        plt.title(f'Time Evolution of {state_names[i]}')
         plt.grid(True)
         plt.xlim(0, end_time)
+        
         safe_filename = state_names[i].replace('/', '_')  
-        plt.savefig(f'Steady_Results/{safe_filename}.png', dpi=600)
+        #plt.savefig(f'Steady_Results/{safe_filename}.png', dpi=600)
         plt.show()
     '''
     # Determine the number of rows needed for the subplots
     num_rows = int(np.ceil(x.shape[1] / 2))
     
     # Create a grid of subplots with the calculated number of rows and 2 columns
-    fig, axs = plt.subplots(num_rows, 2, figsize=(6.4 * 2, 2.4 * num_rows))
+    fig, axs = plt.subplots(num_rows, 2, figsize=(6.4 * 1.8, 2.3 * num_rows))
     axs = axs.flatten()  # Flatten the array of axes so we can iterate over it
     
     # Loop over each state
@@ -676,7 +682,7 @@ def main(end_time, time_step = 0.01, Cp_type = 0):
         axs[i].plot(t, x[:, i])
         axs[i].set_xlabel('Time (s)')
         axs[i].set_ylabel(f'{state_names[i]}')
-        axs[i].set_title(f'Time evolution of {state_names[i]}')
+        axs[i].set_title(f'Time Evolution of {state_names[i]}')
         axs[i].grid(True)
         axs[i].set_xlim(0, end_time)
     
@@ -688,10 +694,10 @@ def main(end_time, time_step = 0.01, Cp_type = 0):
     plt.tight_layout()
     
     # Save the full plot to a file
-    plt.savefig('Steady_Results/combined_plot.png', dpi=600)
+    plt.savefig('Steady_Results/combined_plot.png')
     
     plt.show()
-    '''
+    
     CPU_end = time.process_time()
     end = time.time()
     

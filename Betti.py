@@ -869,7 +869,7 @@ def main(end_time, v_w, x0, v_wind, random_phases, kd, control_mode, time_step =
     # return the output to be ploted
     return t, x, v_wind, wave_eta, Q_t, betas
     
-
+'''
 
 ###############################################################################
 ###############################################################################
@@ -877,7 +877,7 @@ v_wind = genWind(20, 600, 0.05)
 #results = main(6, 20, np.array([-2, 0, 37.550, 0, 0, 0, 1]), v_wind)
 #v_wind = genWind(21, 300, 0.05)
 random_phases = 2 * np.pi * np.random.rand(400)
-'''
+
 #v_wind = np.full(35000, 20)
 #x_1 = main(300, 20, np.array([-2, 0, 37.550, 0, 0, 0, 1.2671]), v_wind, random_phases, 0.01)[1]
 t, x, v_wind, wave_eta, Q_t, betas = main(300, 20, np.array([-2, 0, 37.550, 0, 0, 0, 1.2671]), v_wind, random_phases, 1, 0.05)
@@ -924,7 +924,7 @@ plt.close()
 print(np.mean(x_2))
 print(np.median(x_2))
 print(np.std(x_2))
-'''
+
 n = 200
 
 k_d = np.linspace(0.02, 1, n)
@@ -946,4 +946,4 @@ print(k_d[min_std])
 
 
 
-
+'''
