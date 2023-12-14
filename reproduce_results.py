@@ -1018,7 +1018,7 @@ def load_data(seeds):
     plot_helper(ax_max_occ)
     
     plt.tight_layout() 
-    plt.savefig(f'./{figure_directory}/large_long_coor_wave.png')
+    plt.savefig(f'./{figure_directory}/large_long_stable.png')
     plt.show()
     plt.close(fig_max_occ) 
         
@@ -1081,14 +1081,17 @@ def plot_fft(wave_eta, t):
 #seeds = [966870, 8017384, 8986726534484]
 #surge events
 #seeds = [-4966241,  2503014,  9071735]
+#seeds = [ -402337, -6699134,  7762480]
 #surge velocity
 #seeds = [-3919707,  4205247,   211083]
 #wave short corr
 #seeds = [-2375012,  1896513,   697920]
 #wave long corr
-seeds = [4791833, -6871233,  7883251]
+#seeds = [4791833, -6871233,  7883251]
+#wave stable
+seeds = [6514393, -886514,  133382]
 
-#reproduce_save_driver(seeds)
+reproduce_save_driver(seeds)
 
 
 

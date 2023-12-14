@@ -211,6 +211,7 @@ max_occ Pitch Acceleration (deg/s^2): 438 seeds: [ 966870 8017384 8986784]
 
 surge
 max_occ Surge (m): 439 seeds: [-4966241  2503014  9071735]
+max_occ Surge (m): 1803 seeds: [ -402337 -6699134  7762480]
 surge Velocity
 max_occ Surge Velocity (m/s): 875 seeds: [-3919707  4205247   211083]
 short corr wave
