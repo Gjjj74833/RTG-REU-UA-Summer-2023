@@ -923,17 +923,17 @@ def load_data(seeds):
     # Extracting the data
     t = data['t'][:-1]
     state = data['x'][:-1]
-    #beta = np.rad2deg(data['betas'])
+    beta = np.rad2deg(data['betas'])
     x = data['x'][:-1]
     wind_speed = data['v_wind'][:-1]
     wave_eta = data['wave_eta'][:-1]
     data.close()
     
-    pitch_rate = x[:, 5]  
-    pitch_acceleration = np.diff(pitch_rate)
-    last_acceleration = pitch_acceleration[-1][None]
-    pitch_acceleration = np.concatenate((pitch_acceleration, last_acceleration), axis=0)[:, None] 
-    state = np.concatenate((x[:, :6], pitch_acceleration), axis=1)
+    #pitch_rate = x[:, 5]  
+    #pitch_acceleration = np.diff(pitch_rate)
+    #last_acceleration = pitch_acceleration[-1][None]
+    #pitch_acceleration = np.concatenate((pitch_acceleration, last_acceleration), axis=0)[:, None] 
+    #state = np.concatenate((x[:, :6], pitch_acceleration), axis=1)
     
                         
                            
@@ -985,8 +985,8 @@ def load_data(seeds):
         ax[1].set_xlim(0, t[-1])
         
         # plot 7 states
-        for j in range(7):
-        #for j in range(6):
+        #for j in range(7):
+        for j in range(6):
             ax[j+2].plot(t, max_state[:,j], alpha=0.6, color='green', linewidth=0.5)
             ax[j+2].plot(t, min_state[:,j], alpha=0.6, color='orange', linewidth=0.5)
 
@@ -1004,7 +1004,7 @@ def load_data(seeds):
             
             ax[j+2].tick_params(axis='both', labelsize=16) 
         
-        '''
+        
         ax[8].plot(t, state[:, -1], color='black', linewidth=0.5)
         ax[8].set_xlabel('Time (s)', fontsize=12)
         #ax[j+2].set_ylabel(f'{state_names[j]}')
@@ -1037,7 +1037,7 @@ def load_data(seeds):
                            Line2D([0], [0], color='orange', lw=1, alpha=0.6, label='The Minimum at Each Time Step')]
         
         ax[9].legend(handles=legend_elements, loc='center', fontsize=17.5)
-      
+        '''
     
     # for 8 states including pitch acceleration:
 

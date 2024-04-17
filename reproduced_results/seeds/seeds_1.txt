@@ -218,3 +218,6 @@ short corr wave
 max_value Heave (m): 5739 seeds: [-2375012  1896513   697920]
 long corr wave
 max_occ Surge Velocity (m/s): 763 seeds: [ 4791833 -6871233  7883251]
+
+Large wave stable
+min_value Pitch Rate (deg/s): 1939 seeds: [6514393 -886514  133382]
