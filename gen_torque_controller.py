@@ -263,8 +263,8 @@ def pierson_moskowitz_spectrum(U19_5, zeta, eta, t, random_phases):
     a_x = np.sum((omega**2) * a * exp_component * cos_component)
     a_y = -np.sum((omega**2) * a * exp_component * sin_component)
 
-    #return wave_eta, [v_x, v_y, a_x, a_y]
-    return 0, [0,0,0,0]
+    return wave_eta, [v_x, v_y, a_x, a_y]
+    #return 0, [0,0,0,0]
 
 
 def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases):
@@ -572,6 +572,9 @@ def WindTurbine(omega_R, v_in, beta, T_E, t, Cp):
     rho = 1.225 # (kg/m^3) Density of air
     A = 12469 # (m^2) Rotor area
     eta_G = 97 # (-) Speed ratio between high and low speed shafts
+    P_0 = 5296610 # rated power
+    
+    T_E = P_0 / (eta_G*omega_R)
     
     tildeJ_R = eta_G**2*J_G + J_R
     tildeT_E = eta_G*T_E
@@ -582,6 +585,8 @@ def WindTurbine(omega_R, v_in, beta, T_E, t, Cp):
 
     T_A = P_A/omega_R
     domega_R = (1/tildeJ_R)*(T_A - tildeT_E)
+    
+    #print(T_E*eta_G*omega_R)
     
     return domega_R
     
@@ -666,6 +671,7 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     """
     
     d_BS = 37.550 # (m) The position of center of weight of BS (platform and tower)
+    eta_G = 97 # (-) Speed ratio between high and low speed shafts
     
     n = int((tf - t0) / dt) + 1
     t = np.linspace(t0, tf, n)
@@ -686,11 +692,12 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     
     def PI_blade_pitch_controller(omega_R, dt, beta, integral, error, i):
 
-        
-        eta_G = 97 # (-) Speed ratio between high and low speed shafts
         J_G = 534.116 # (kg*m^2) Total inertia of electric generator and high speed shaft
         J_R = 35444067 # (kg*m^2) Total inertia of blades, hub and low speed shaft
         tildeJ_R = eta_G**2*J_G + J_R
+        
+        
+        
     
         rated_omega_R = 1.26711 # The rated rotor speed is 12.1 rpm
         #rated_omega_R = 1.571
@@ -704,6 +711,9 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
         K_p = 0.0765*(2*tildeJ_R*rated_omega_R*zeta_phi*omega_phin*GK)/(eta_G*(-dpdbeta_0))
         K_i = 0.013*(tildeJ_R*rated_omega_R*omega_phin**2*GK)/(eta_G*(-dpdbeta_0))
         K_d = 0.187437
+        #K_p = (2*tildeJ_R*rated_omega_R*zeta_phi*omega_phin*GK)/(eta_G*(-dpdbeta_0))
+        #K_i = (tildeJ_R*rated_omega_R*omega_phin**2*GK)/(eta_G*(-dpdbeta_0))
+        #K_d = 0
         
         error_omega_R = omega_R - rated_omega_R
         error[i] = error_omega_R
@@ -738,6 +748,7 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     h_waves = []
     for i in range(n - 1):
         betas.append(beta)
+        
         k1, h_wave, Q_t = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)
         k2 = Betti(x[i] + 0.5 * dt * k1, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)[0]
         k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)[0]
@@ -1169,7 +1180,7 @@ seed = [[-8615404,  1149694,  9191470],
 
 
 
-#reproduce_save_driver(seeds)
+reproduce_save_driver(seeds)
 
 
 

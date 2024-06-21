@@ -12,6 +12,7 @@ import bisect
 import matplotlib.pyplot as plt
 from scipy.signal import spectrogram
 from matplotlib.lines import Line2D
+from gen_wind_Van_Der_Hoven import generate_wind
 
 def process_rotor_performance(input_file = "Cp_Ct.NREL5MW.txt"):
     """
@@ -100,6 +101,64 @@ def CpCtCq(TSR, beta, performance):
     # Get the C_p value at the index 
     return C_p[TSR_index][pitch_index], C_t[TSR_index][pitch_index]
 
+def gen_turbulence(v_bar, L, k_sigma_v, T_s, N_t, white_noise, 
+                   delta_omega = 0.002, M = 5000, N = 100):
+    """
+    Generate turbulencec component for wind speed
+
+    Parameters
+    ----------
+    v_bar : int
+        Average wind speed
+    L : int
+        Turbulence length
+    k_sigma_v : float
+        Slope parameter
+    T_s : int
+        Time step
+    N_t : int
+        Number of step
+    white_noise : np.array
+        the white noise with mean = 0 and std = 1, has length 
+
+    Returns
+    -------
+    Array of wind speed with turbulence
+
+    """
+    
+    # Step 1: Update the current values of the parameters in 
+    # the turbulence component model
+    T_F = L / v_bar
+    sigma_v = k_sigma_v * v_bar
+    K_F = np.sqrt((2 * np.pi * T_F)/(4.20654 * T_s))
+    
+    # Step 2: Calculate the discrete impulse response of the filter
+    delta_omega = 0.002 # Frequency step size
+    M = 5000 # Number of frequency points
+    N = 100 # Numerical parameters for convolution integration, divide 
+            # finite integral from 0 to t to N regions
+    
+    # Discrete frequency domain P(omega)
+    P = np.zeros(M + 1)
+    for r in range(M + 1):
+        P[r] = np.real(K_F / (1 + 1j * r * delta_omega * T_F)**(5/6))
+    
+    # Discrete impulse response h(k) === h(T_s*k), k range from 0 to N
+    h = np.zeros(N + 1)
+    for k in range(N + 1):
+        h[k] = T_s * delta_omega * (2/np.pi) * np.sum(P * np.cos(k * np.arange(M + 1) * T_s * delta_omega))
+    
+    # Step 3: Generate the turbulence component in the interval using convolution
+    v_t = np.zeros(N_t + 1)
+    
+    # Zero-pad the white noise 
+    white_noise_padded = np.pad(white_noise, (0, N), 'constant')
+    
+    for m in range(N_t + 1):
+        v_t[m] = T_s * np.sum(h * white_noise_padded[m : m + N + 1])
+    
+    return v_bar + sigma_v * v_t
 
 def genWind(v_w, end_time, time_step, seed):
     """
@@ -263,8 +322,8 @@ def pierson_moskowitz_spectrum(U19_5, zeta, eta, t, random_phases):
     a_x = np.sum((omega**2) * a * exp_component * cos_component)
     a_y = -np.sum((omega**2) * a * exp_component * sin_component)
 
-    #return wave_eta, [v_x, v_y, a_x, a_y]
-    return 0, [0,0,0,0]
+    return wave_eta, [v_x, v_y, a_x, a_y]
+    #return 0, [0,0,0,0]
 
 
 def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases):
@@ -772,18 +831,18 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     # dicard data for first 500s
     discard_steps = int(500 / 0.5)
     
-    np.savez(f'reproduced_results/data/{seeds[0]}_{seeds[1]}_{seeds[2]}_wind_wave_time.npz', 
+    np.savez(f'reproduced_results/data/{seeds[0]}_{seeds[1]}_wind_wave_time.npz', 
                                                     t=t,  
                                                     v_wind=v_wind, 
                                                     wave_eta=wave_eta)    
 
-    t_sub = t[::steps][discard_steps:]
-    x_sub = x[::steps][discard_steps:]
-    v_wind_sub = v_wind[:len(t)][::steps][discard_steps:]
-    wave_eta_sub = np.array(wave_eta)[::steps][discard_steps:]
-    h_wave_sub = np.array(h_waves)[::steps][discard_steps:]
-    betas_sub = betas[::steps][discard_steps:]
-    Qt_list_sub = Qt_list[::steps][discard_steps:]
+    t_sub = t[::steps][:-discard_steps]
+    x_sub = x[::steps][:-discard_steps]
+    v_wind_sub = v_wind[:len(t)][::steps][:-discard_steps]
+    wave_eta_sub = np.array(wave_eta)[::steps][:-discard_steps]
+    h_wave_sub = np.array(h_waves)[::steps][:-discard_steps]
+    betas_sub = betas[::steps][:-discard_steps]
+    Qt_list_sub = Qt_list[::steps][:-discard_steps]
     
     return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, h_wave_sub, betas_sub, Qt_list_sub
 
@@ -818,9 +877,25 @@ def main(end_time, v_w, x0, seeds, seed_wave, time_step = 0.05, Cp_type = 0):
     # modify this to change initial condition
     #[zeta, v_zeta, eta, v_eta, alpha, omega, omega_R]
     #v_wind = genWind(v_w, end_time, time_step, seeds)
-    v_wind = np.load(f'reproduced_results/turbsim_output/{seeds[0]}_{seeds[1]}.npy')
+    #v_wind = np.load(f'reproduced_results/turbsim_output/{seeds[0]}_{seeds[1]}.npy')
     #v_wind = genWind_seeds(seeds)
     #v_wind = np.full(45000, 20)
+    def insert_elements(arr, num_elements):
+
+        result = []
+        for i in range(len(arr) - 1):
+            start, end = arr[i], arr[i + 1]
+            result.extend(np.linspace(start, end, num_elements + 2)[:-1])
+        result.append(arr[-1])
+        return np.array(result)
+    
+    # generate a random seed
+    state_before = np.random.get_state()
+    np.random.seed(seeds)
+    white_noise = np.random.randn(end_time + 1)
+    np.random.set_state(state_before)
+    
+    v_wind = insert_elements(gen_turbulence(v_w, 180, 0.13, 1, end_time, white_noise), int(1/time_step))
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
@@ -882,8 +957,8 @@ def reproduce_save_driver(seeds):
     v_w = 20
     end_time = 2000 #end_time < 3000
     
-    seeds_wind = [seeds[0], seeds[1]]
-    seed_wave = seeds[2]
+    seeds_wind = seeds[0]
+    seed_wave = seeds[1]
     
     
     x0 = np.array([-2.61426271, 
@@ -896,7 +971,7 @@ def reproduce_save_driver(seeds):
     t, x, v_wind, wave_eta, h_wave, betas, Q_t = main(end_time, v_w, x0, seeds_wind, seed_wave)
     end_time -= 500
     
-    np.savez(f'reproduced_results/data/{seeds[0]}_{seeds[1]}_{seeds[2]}.npz', 
+    np.savez(f'reproduced_results/data/{seeds[0]}_{seeds[1]}.npz', 
                                                     t=t,  
                                                     x=x, 
                                                     v_wind=v_wind, 
@@ -916,25 +991,25 @@ def load_data(seeds):
     load the percentile and extreme value
     '''
     
-    output_file_name = f'{seeds[0]}_{seeds[1]}_{seeds[2]}.npz'
+    output_file_name = f'{seeds[0]}_{seeds[1]}.npz'
 
     data = np.load(f'reproduced_results/data/{output_file_name}', allow_pickle=True)
     
     # Extracting the data
     t = data['t'][:-1]
     state = data['x'][:-1]
-    #beta = np.rad2deg(data['betas'])
+    beta = np.rad2deg(data['betas'])
     x = data['x'][:-1]
     wind_speed = data['v_wind'][:-1]
     wave_eta = data['wave_eta'][:-1]
     data.close()
-    
+    '''
     pitch_rate = x[:, 5]  
     pitch_acceleration = np.diff(pitch_rate)
     last_acceleration = pitch_acceleration[-1][None]
     pitch_acceleration = np.concatenate((pitch_acceleration, last_acceleration), axis=0)[:, None] 
     state = np.concatenate((x[:, :6], pitch_acceleration), axis=1)
-    
+    '''
                         
                            
     # Extracting percentile data
@@ -985,8 +1060,8 @@ def load_data(seeds):
         ax[1].set_xlim(0, t[-1])
         
         # plot 7 states
-        for j in range(7):
-        #for j in range(6):
+        #for j in range(7):
+        for j in range(6):
             ax[j+2].plot(t, max_state[:,j], alpha=0.6, color='green', linewidth=0.5)
             ax[j+2].plot(t, min_state[:,j], alpha=0.6, color='orange', linewidth=0.5)
 
@@ -1004,7 +1079,7 @@ def load_data(seeds):
             
             ax[j+2].tick_params(axis='both', labelsize=16) 
         
-        '''
+        
         ax[8].plot(t, state[:, -1], color='black', linewidth=0.5)
         ax[8].set_xlabel('Time (s)', fontsize=12)
         #ax[j+2].set_ylabel(f'{state_names[j]}')
@@ -1037,7 +1112,7 @@ def load_data(seeds):
                            Line2D([0], [0], color='orange', lw=1, alpha=0.6, label='The Minimum at Each Time Step')]
         
         ax[9].legend(handles=legend_elements, loc='center', fontsize=17.5)
-      
+        '''
     
     # for 8 states including pitch acceleration:
 
@@ -1112,7 +1187,7 @@ def plot_fft(wave_eta, t):
 #seeds = [966870, 8017384, 8986784]
 #surge events
 #seeds = [-4966241,  2503014,  9071735]
-seeds = [ -402337, -6699134,  7762480]
+#seeds = [ -402337, -6699134,  7762480]
 #surge velocity
 #2eeds = [-3919707,  4205247,   211083]
 #wave short corr
@@ -1154,7 +1229,7 @@ seeds = [ -402337, -6699134,  7762480]
 #seeds = [ 4200242, -3440907,  5773012] #std:  0.31226751594476654
 
 #std = load_data(seeds)
-
+seeds =[7619098, 6844915]
 
 seed = [[-8615404,  1149694,  9191470],
         [3973823, 4556159, 3377501],
@@ -1169,7 +1244,7 @@ seed = [[-8615404,  1149694,  9191470],
 
 
 
-#reproduce_save_driver(seeds)
+reproduce_save_driver(seeds)
 
 
 
