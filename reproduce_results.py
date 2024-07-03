@@ -743,7 +743,7 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     integral = 0
     beta = beta_0
     
-    def PI_blade_pitch_controller(omega_R, dt, beta, integral, error, i):
+    def PI_blade_pitch_controller(omega_R, dt, beta, integral, error, i, current_region):
 
         
         eta_G = 97 # (-) Speed ratio between high and low speed shafts
@@ -786,15 +786,100 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
             beta = 0
         elif beta >= np.pi/4:
             beta = np.pi/4
+            
+        # find proper T_E based on rotor speed
+        generator_speed = omega_R * 97 * 9.549297
         
-        return beta, integral, error
+        if current_region == 1:
+            new_T_E = 0
+            beta = 0
+            integral = 0
+        elif current_region == 1.5:
+            new_T_E = 96.53386 * generator_speed - 64677.68667
+            beta = 0
+            integral = 0
+        elif current_region == 2:
+            new_T_E = 0.0255764 * generator_speed**2
+            beta = 0
+            integral = 0
+        elif current_region == 2.5:
+            new_T_E = 729.4343 * generator_speed - 813043.45
+            beta = 0
+            integral = 0
+        else:
+            #new_T_E = 5296610 / (97*omega_R)
+            new_T_E = 43093.55
+        
+        
+        max_TE_change_rate = 15000 / dt
+        delta_T_E = new_T_E - T_E
+
+        if delta_T_E > max_TE_change_rate:
+            new_T_E = T_E + max_TE_change_rate
+        elif delta_T_E < -max_TE_change_rate:
+            new_T_E = T_E - max_TE_change_rate
+        
+        return beta, integral, error, new_T_E
+    
+    def find_region(omega_R, beta, current_region):
+      
+        generator_speed = omega_R * 97 * 9.549297
+        # if in region 1
+        if current_region == 1:
+            # change to region 1.5 if the generator speed 
+            # is greater than 670 rpm
+            if generator_speed > 670:
+                return 1.5
+            # else stay in region 1
+            return 1
+        
+        # if in region 1.5
+        if current_region == 1.5:
+            # change to region 2 if the generator speed is greater than 871 rpm
+            if generator_speed > 871:
+                return 2
+            # change to region 1 if the generator speed is less than 670 rpm
+            if generator_speed < 670:
+                return 1
+            # else stay in region 1.5
+            return 1.5
+        
+        # if in region 2
+        if current_region == 2:
+            # change to region 2.5 if the generator speed is greater than 1161.963 rpm
+            if generator_speed > 1161.963:
+                return 2.5
+            # change to region 1.5 if the generator speed is less than 871 rpm
+            if generator_speed < 871:
+                return 1.5
+            return 2
+        
+        # if in region 2.5
+        if current_region == 2.5:
+            # change to region 3 if the generator speed is greater than 1173.7 rpm
+            if generator_speed > 1173.7:
+                return 3
+            # change to region 2 if the generator speed is less than 1161.963
+            if generator_speed < 1161.963:
+                return 2
+            return 2.5
+        
+        # if in region 3
+        if current_region == 3:
+            if beta == 0:
+                global integral
+                integral = 0
+                return 2.5
+            return 3
 
     ###########################################################################
 
     error = np.empty(n)
-    
+    current_region = 3
     betas = []
     h_waves = []
+    T_E_list = []
+    P_A_list = []
     for i in range(n - 1):
         betas.append(beta)
         k1, h_wave, Q_t = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)
@@ -802,14 +887,18 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
         k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)[0]
         k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E, Cp_type, performance, v_wind[i], v_w, random_phases)[0]
         x[i + 1] = x[i] + dt * (k1 + 2*k2 + 2*k3 + k4) / 6
-        
-        beta, integral, error = PI_blade_pitch_controller(x[i][6], dt, beta, integral, error, i)
+        current_region = find_region(x[i][6], beta, current_region)
+        beta, integral, error, T_E = PI_blade_pitch_controller(x[i][6], dt, beta, integral, error, i, current_region)
         
         Qt_list.append(Q_t)
         h_waves.append(h_wave)
+        T_E_list.append(T_E)
+        P_A_list.append(T_E*97*x[i][6])
         
     last_Qt = Betti(x[-1], t[-1], beta, T_E, Cp_type, performance, v_wind[-1], v_w, random_phases)[1]
     Qt_list.append(last_Qt)
+    T_E_list.append(T_E_list[-1])
+    P_A_list.append(P_A_list[-1])
     
     Qt_list = np.array(Qt_list)
     Qt_list =  -Qt_list
@@ -843,8 +932,10 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     h_wave_sub = np.array(h_waves)[::steps][:-discard_steps]
     betas_sub = betas[::steps][:-discard_steps]
     Qt_list_sub = Qt_list[::steps][:-discard_steps]
+    T_E_list_sub = T_E_list[::steps][:-discard_steps]
+    P_A_list_sub = P_A_list[::steps][:-discard_steps]
     
-    return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, h_wave_sub, betas_sub, Qt_list_sub
+    return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, h_wave_sub, betas_sub, Qt_list_sub, T_E_list_sub, P_A_list_sub
 
 
 def main(end_time, v_w, x0, seeds, seed_wave, time_step = 0.05, Cp_type = 0):
@@ -899,10 +990,10 @@ def main(end_time, v_w, x0, seeds, seed_wave, time_step = 0.05, Cp_type = 0):
 
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x, v_wind, wave_eta, h_wave, betas, Q_t = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind, seed_wave)
+    t, x, v_wind, wave_eta, h_wave, betas, Q_t, P_A, T_E = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind, seed_wave)
 
     # return the output to be ploted
-    return t, x, v_wind, wave_eta, h_wave, betas, Q_t
+    return t, x, v_wind, wave_eta, h_wave, betas, Q_t, P_A, T_E
 
 
 #min_occ Pitch Rate (deg/s): 2761 seeds: [-1891041594 -2125278397       56161]
@@ -968,7 +1059,7 @@ def reproduce_save_driver(seeds):
                      0.00147344971, 
                      -0.000391112846, 
                      1.26855822])
-    t, x, v_wind, wave_eta, h_wave, betas, Q_t = main(end_time, v_w, x0, seeds_wind, seed_wave)
+    t, x, v_wind, wave_eta, h_wave, betas, Q_t, T_E, P_A = main(end_time, v_w, x0, seeds_wind, seed_wave)
     end_time -= 500
     
     np.savez(f'reproduced_results/data/{seeds[0]}_{seeds[1]}.npz', 
@@ -978,7 +1069,9 @@ def reproduce_save_driver(seeds):
                                                     wave_eta=wave_eta, 
                                                     betas=betas,
                                                     h_wave=h_wave,
-                                                    Q_t=Q_t)
+                                                    Q_t=Q_t,
+                                                    T_E=T_E,
+                                                    P_A=P_A)
     
 
 #####################################################################################
